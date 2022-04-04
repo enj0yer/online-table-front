@@ -1,0 +1,22 @@
+*{
+    font-family: 'Segoe UI', serif;
+}
+
+#header{
+    text-align: center;
+    font-size: 30pt;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: darkorange;
+    width: 100%;
+}
+#container{
+    width: max-content;
+    height: max-content;
+    margin-top: 60px;
+}
+
+.cell{
+    font-size: 20pt;
+}
