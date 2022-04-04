@@ -5,18 +5,29 @@
 #header{
     text-align: center;
     font-size: 30pt;
+    height: 50px;
     position: fixed;
     top: 0;
     left: 0;
-    background-color: darkorange;
+    background-color: #bdbdbd;
     width: 100%;
 }
 #container{
     width: max-content;
     height: max-content;
-    margin-top: 60px;
+    margin: 100px auto;
 }
 
 .cell{
-    font-size: 20pt;
+    text-align: left;
+    width: 100px;
+    height: calc(2rem);
+    padding: 0.375rem 0.75rem;
+    color: #212529;
+    background-color: #fff;
+    border: 1px solid #bdbdbd;
+}
+.row{
+    width: 100%;
+    display: flex;
 }
