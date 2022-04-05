@@ -5,6 +5,46 @@ let MOUSESELECTIONSTART = null;
 let MOUSESELECTIONFINISH = null;
 let MOUSEPRESSED = false;
 let SELECTIONACTIVE = false;
+let CLIPBOARD = null;
+
+class Selection {
+    #rows_num;
+    #cols_num;
+    #cells;
+
+    constructor(cells, rows_num, cols_num) {
+        if (!checkNumId(rows_num, cols_num)) throw new Error(`Wrong value(s) of rows = ${rows_num} and cols = ${cols_num} number `);
+        this.#cols_num = cols_num;
+        this.#rows_num = rows_num;
+        this.#cells = cells;
+    }
+
+    getCells() {
+        return this.#cells;
+    }
+
+    getRowsNum() {
+        return this.#rows_num;
+    }
+
+    getColsNum() {
+        return this.#cols_num;
+    }
+
+    getFirst() {
+        return this.#cells[0];
+    }
+
+    getCellByRowCol(row, col){
+        if (row > this.#rows_num || col > this.#rows_num || col < 1 || row < 1){
+            throw new Error(`Values of row = ${row} or col = ${col} is out of bounds`);
+        }
+
+        let start = row * this.#cols_num;
+
+        return this.#cells[start + col];
+    }
+}
 
 class Cell{
     #col_num;
@@ -45,6 +85,13 @@ function checkStringId(id){
 
     if (col_num < 1 || col_num > COLS) return false;
     if (row_num < 1 || row_num > ROWS) return false;
+
+    return true;
+}
+
+function checkNumId(row, col){
+    if (col < 1 || col > COLS) return false;
+    if (row < 1 || row > ROWS) return false;
 
     return true;
 }
@@ -91,21 +138,27 @@ function generateGrid(rows, cols){
         if (!el.classList.contains("col_nums")) {
             el.innerHTML += `<div class="row_nums cell border" id="${el.id}_num" style="text-align: center">${el.id.split('_')[1]}</div>`
             for (let i = 1; i <= cols; i++) {
-                el.innerHTML += `<input id="${el.id.split('_')[1]}_${i}" value="${(Math.random() * rows * cols) >> 0}" class="cell">`;
+                el.innerHTML += `<input id="${el.id.split('_')[1]}_${i}" value="${(Math.random() * cols * rows) >> 0}" class="cell">`;
             }
         }
         else {
             for (let i = 0; i <= cols; i++) {
-                el.innerHTML += `<div id="col_${i}" class="cell border" style="text-align: center">${i}</div>`
+                el.innerHTML += `<div id="col_${i}" class="cell border" style="text-align: center">${getLiteralInsteadNumber(i)}</div>`
             }
         }
     });
 }
 
-function colorize(cells = null){
-    if (cells === null) return;
+function colorize(selection = null){
+    if (selection === null){
+        SELECTIONACTIVE = false;
+        return;
+    }
+
+    // SELECTIONACTIVE = true;
+
     document.querySelectorAll('input.cell, div.border').forEach(el => el.style.backgroundColor = 'white');
-    cells.forEach(el => {
+    selection.getCells().forEach(el => {
         document.getElementById(el.getFullId()).style.backgroundColor = 'rgb(105,181,255)';
         document.getElementById("row_" + el.getRowNum() + "_num").style.backgroundColor = 'rgb(178,178,178)';
         document.getElementById("col_" + el.getColNum()).style.backgroundColor = 'rgb(178,178,178)';
@@ -114,7 +167,7 @@ function colorize(cells = null){
 
 }
 
-function getRectangle(cell_1, cell_2){
+function getSelection(cell_1, cell_2){
 
     if (cell_1 === null || cell_2 === null) return null;
 
@@ -143,15 +196,44 @@ function getRectangle(cell_1, cell_2){
 
     const cells = [];
 
-    for (let i = left; i <= right; i++){
-        for (let j = top; j <= bottom; j++){
-            cells.push(new Cell(`${j}_${i}`, document.getElementById(`${j}_${i}`).value));
+    for (let i = top; i <= bottom; i++){
+        for (let j = left; j <= right; j++){
+            cells.push(new Cell(`${i}_${j}`, document.getElementById(`${i}_${j}`).value));
         }
     }
 
-    return cells;
+    return new Selection(cells, bottom - top + 1, right - left + 1);
+}
+
+function pasteValues(start_cell, cells_array){
+
+    let start_col = start_cell.getColNum();
+    let start_row = start_cell.getRowNum();
+
+    for (let i = start_row; i <= cells_array.getRowsNum() + start_row; i++){
+        for (let j = start_col; j <= cells_array.getColsNum() + start_col; j++){
+            if (checkNumId(i, j)){
+                //document.getElementById(`${i}_${j}`).value = cells_array.getCellByRowCol(i - start_row + 1, j - start_col + 1);
+            }
+            else {
+                alert("Недостаточно клеток для заполнения");
+                return;
+            }
+        }
+    }
+}
+
+function getLiteralInsteadNumber(number){
+    const literals = ['', 'A', 'B', 'C', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+    if (number >= 0 && number <= 26){
+        return literals[number];
+    }
+
+    return literals[0];
 
 }
+
 
 function getAllValues(){
     const map = new Map();
@@ -167,31 +249,53 @@ document.getElementById("header").addEventListener('click', getAllValues);
 //     el.addEventListener('click', el => console.log(getNeighbours(el.target.id)));
 // });
 
+document.querySelectorAll('input.cell').forEach(el => el.addEventListener('copy', ev => {
+    if (SELECTIONACTIVE){
+        CLIPBOARD = getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH);
+    }
+}));
+
+document.querySelectorAll('input.cell').forEach(el =>el.addEventListener('paste', ev => {
+   if (CLIPBOARD !== null){
+       pasteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH).getFirst(), CLIPBOARD);
+   }
+}));
+
 document.querySelectorAll('input.cell').forEach(el => {
-    el.addEventListener('mousedown', el => {
+     el.setAttribute('readonly', 'readonly');
+    el.addEventListener('mousedown', ev => {
+        el.setAttribute('readonly', 'readonly');
         if (MOUSEPRESSED === true){
             SELECTIONACTIVE = false;
-            MOUSESELECTIONSTART = new Cell(el.target.id);
-            MOUSESELECTIONFINISH = new Cell(el.target.id);
-            colorize(getRectangle(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+            MOUSESELECTIONSTART = new Cell(ev.target.id);
+            MOUSESELECTIONFINISH = new Cell(ev.target.id);
+            colorize(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
         }
         else{
             SELECTIONACTIVE = true;
             MOUSEPRESSED = true;
-            MOUSESELECTIONSTART = new Cell(el.target.id);
-            MOUSESELECTIONFINISH = new Cell(el.target.id);
-            colorize(getRectangle(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+            MOUSESELECTIONSTART = new Cell(ev.target.id);
+            MOUSESELECTIONFINISH = new Cell(ev.target.id);
+            colorize(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
         }
 
     });
-    el.addEventListener('mouseup', el => {
-        console.log(getRectangle(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+    el.addEventListener('dblclick', ev => {
+       MOUSEPRESSED = true;
+       MOUSESELECTIONSTART = null;
+       MOUSESELECTIONFINISH = null;
+       el.removeAttribute('readonly');
+    });
+    el.addEventListener('mouseup', ev => {
+        console.log(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+        el.setAttribute('readonly', 'readonly');
         MOUSEPRESSED = false;
     });
-    el.addEventListener('mouseover', el => {
+    el.addEventListener('mouseover', ev => {
         if (MOUSEPRESSED === true){
-            MOUSESELECTIONFINISH = new Cell(el.target.id);
-            colorize(getRectangle(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+            el.setAttribute('readonly', 'readonly');
+            MOUSESELECTIONFINISH = new Cell(ev.target.id);
+            colorize(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
         }
     });
 });
