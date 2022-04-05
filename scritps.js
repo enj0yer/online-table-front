@@ -35,12 +35,16 @@ class Selection {
         return this.#cells[0];
     }
 
+    getLast(){
+        return this.#cells[this.#cells.length - 1];
+    }
+
     getCellByRowCol(row, col){
-        if (row > this.#rows_num || col > this.#rows_num || col < 1 || row < 1){
+        if (row > this.#rows_num || col > this.#cols_num || col < 1 || row < 1){
             throw new Error(`Values of row = ${row} or col = ${col} is out of bounds`);
         }
 
-        let start = row * this.#cols_num;
+        let start = (row - 1) * this.#cols_num - 1;
 
         return this.#cells[start + col];
     }
@@ -125,6 +129,8 @@ function getNeighbours(id){
     }
 }
 
+//"${(Math.random() * cols * rows) >> 0}"
+
 function generateGrid(rows, cols){
 
     const container = document.getElementById('container');
@@ -138,7 +144,7 @@ function generateGrid(rows, cols){
         if (!el.classList.contains("col_nums")) {
             el.innerHTML += `<div class="row_nums cell border" id="${el.id}_num" style="text-align: center">${el.id.split('_')[1]}</div>`
             for (let i = 1; i <= cols; i++) {
-                el.innerHTML += `<input id="${el.id.split('_')[1]}_${i}" value="${(Math.random() * cols * rows) >> 0}" class="cell">`;
+                el.innerHTML += `<input id="${el.id.split('_')[1]}_${i}" value="" class="cell">`;
             }
         }
         else {
@@ -210,16 +216,21 @@ function pasteValues(start_cell, cells_array){
     let start_col = start_cell.getColNum();
     let start_row = start_cell.getRowNum();
 
-    for (let i = start_row; i <= cells_array.getRowsNum() + start_row; i++){
-        for (let j = start_col; j <= cells_array.getColsNum() + start_col; j++){
-            if (checkNumId(i, j)){
-                //document.getElementById(`${i}_${j}`).value = cells_array.getCellByRowCol(i - start_row + 1, j - start_col + 1);
-            }
-            else {
-                alert("Недостаточно клеток для заполнения");
-                return;
-            }
+    if (!checkNumId(cells_array.getRowsNum() + start_row - 1, cells_array.getColsNum() + start_col - 1)){
+        alert("Недостаточно места для заполнения");
+        return;
+    }
+
+    for (let i = start_row; i <= cells_array.getRowsNum() + start_row - 1; i++){
+        for (let j = start_col; j <= cells_array.getColsNum() + start_col - 1; j++){
+            document.getElementById(`${i}_${j}`).value = cells_array.getCellByRowCol(i - start_row + 1, j - start_col + 1).getValue();
         }
+    }
+}
+
+function deleteValues(cells){
+    for (let el of cells.getCells()){
+        document.getElementById(el.getFullId()).value = "";
     }
 }
 
@@ -233,7 +244,6 @@ function getLiteralInsteadNumber(number){
     return literals[0];
 
 }
-
 
 function getAllValues(){
     const map = new Map();
@@ -255,14 +265,19 @@ document.querySelectorAll('input.cell').forEach(el => el.addEventListener('copy'
     }
 }));
 
-document.querySelectorAll('input.cell').forEach(el =>el.addEventListener('paste', ev => {
-   if (CLIPBOARD !== null){
-       pasteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH).getFirst(), CLIPBOARD);
-   }
-}));
+// document.querySelectorAll('input.cell').forEach(el =>el.addEventListener('paste', ev => {
+//    if (CLIPBOARD !== null){
+//        pasteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH).getFirst(), CLIPBOARD);
+//    }
+// }));
 
 document.querySelectorAll('input.cell').forEach(el => {
-     el.setAttribute('readonly', 'readonly');
+    el.setAttribute('readonly', 'readonly');
+    el.addEventListener('paste', ev => {
+        if (CLIPBOARD !== null){
+            pasteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH).getFirst(), CLIPBOARD);
+        }
+    });
     el.addEventListener('mousedown', ev => {
         el.setAttribute('readonly', 'readonly');
         if (MOUSEPRESSED === true){
@@ -278,13 +293,13 @@ document.querySelectorAll('input.cell').forEach(el => {
             MOUSESELECTIONFINISH = new Cell(ev.target.id);
             colorize(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
         }
-
     });
     el.addEventListener('dblclick', ev => {
-       MOUSEPRESSED = true;
-       MOUSESELECTIONSTART = null;
-       MOUSESELECTIONFINISH = null;
-       el.removeAttribute('readonly');
+        ev.target.style.backgroundColor = 'rgb(182,204,250)'
+        MOUSEPRESSED = true;
+        MOUSESELECTIONSTART = null;
+        MOUSESELECTIONFINISH = null;
+        el.removeAttribute('readonly');
     });
     el.addEventListener('mouseup', ev => {
         console.log(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
@@ -299,3 +314,10 @@ document.querySelectorAll('input.cell').forEach(el => {
         }
     });
 });
+
+document.onkeydown = (event) => {
+    if (SELECTIONACTIVE && event.key === 'Delete'){
+        console.log("delete");
+        deleteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH))
+    }
+}
