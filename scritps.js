@@ -255,24 +255,20 @@ function getAllValues(){
 
 generateGrid(ROWS, COLS);
 document.getElementById("header").addEventListener('click', getAllValues);
-// document.querySelectorAll('input.cell').forEach(el => {
-//     el.addEventListener('click', el => console.log(getNeighbours(el.target.id)));
-// });
-
-document.querySelectorAll('input.cell').forEach(el => el.addEventListener('copy', ev => {
-    if (SELECTIONACTIVE){
-        CLIPBOARD = getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH);
-    }
-}));
-
-// document.querySelectorAll('input.cell').forEach(el =>el.addEventListener('paste', ev => {
-//    if (CLIPBOARD !== null){
-//        pasteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH).getFirst(), CLIPBOARD);
-//    }
-// }));
 
 document.querySelectorAll('input.cell').forEach(el => {
     el.setAttribute('readonly', 'readonly');
+    el.addEventListener('cut', ev => {
+        if (SELECTIONACTIVE){
+            CLIPBOARD = getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH);
+            deleteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+        }
+    });
+    el.addEventListener('copy', ev => {
+        if (SELECTIONACTIVE){
+            CLIPBOARD = getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH);
+        }
+    });
     el.addEventListener('paste', ev => {
         if (CLIPBOARD !== null){
             pasteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH).getFirst(), CLIPBOARD);
