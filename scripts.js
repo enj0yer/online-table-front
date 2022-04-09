@@ -1,10 +1,13 @@
+import {isFormula, pullFuncName} from "./parsing";
+
+
 const ROWS = 10;
 const COLS = 10;
 
-let MOUSESELECTIONSTART = null;
-let MOUSESELECTIONFINISH = null;
-let MOUSEPRESSED = false;
-let SELECTIONACTIVE = false;
+let MOUSE_SELECTION_START = null;
+let MOUSE_SELECTION_FINISH = null;
+let MOUSE_PRESSED = false;
+let SELECTION_ACTIVE = false;
 let CLIPBOARD = null;
 
 class Selection {
@@ -129,8 +132,6 @@ function getNeighbours(id){
     }
 }
 
-//"${(Math.random() * cols * rows) >> 0}"
-
 function generateGrid(rows, cols){
 
     const container = document.getElementById('container');
@@ -157,11 +158,11 @@ function generateGrid(rows, cols){
 
 function colorize(selection = null){
     if (selection === null){
-        SELECTIONACTIVE = false;
+        SELECTION_ACTIVE = false;
         return;
     }
 
-    // SELECTIONACTIVE = true;
+    // SELECTION_ACTIVE = true;
 
     document.querySelectorAll('input.cell, div.border').forEach(el => el.style.backgroundColor = 'white');
     selection.getCells().forEach(el => {
@@ -256,64 +257,82 @@ function getAllValues(){
 generateGrid(ROWS, COLS);
 document.getElementById("header").addEventListener('click', getAllValues);
 
+document.addEventListener('copy', ev => {
+    if (SELECTION_ACTIVE){
+        CLIPBOARD = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
+    }
+});
+document.addEventListener('cut', ev => {
+    if (SELECTION_ACTIVE){
+        CLIPBOARD = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
+        deleteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
+    }
+});
+
+document.addEventListener('paste', ev => {
+    if (CLIPBOARD !== null){
+        pasteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH).getFirst(), CLIPBOARD);
+    }
+});
+
 document.querySelectorAll('input.cell').forEach(el => {
     el.setAttribute('readonly', 'readonly');
-    el.addEventListener('cut', ev => {
-        if (SELECTIONACTIVE){
-            CLIPBOARD = getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH);
-            deleteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
-        }
-    });
-    el.addEventListener('copy', ev => {
-        if (SELECTIONACTIVE){
-            CLIPBOARD = getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH);
-        }
-    });
-    el.addEventListener('paste', ev => {
-        if (CLIPBOARD !== null){
-            pasteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH).getFirst(), CLIPBOARD);
-        }
-    });
+    // el.addEventListener('cut', ev => {
+    //     if (SELECTION_ACTIVE){
+    //         CLIPBOARD = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
+    //         deleteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
+    //     }
+    // });
+    // el.addEventListener('copy', ev => {
+    //     if (SELECTION_ACTIVE){
+    //         CLIPBOARD = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
+    //     }
+    // });
+    // el.addEventListener('paste', ev => {
+    //     if (CLIPBOARD !== null){
+    //         pasteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH).getFirst(), CLIPBOARD);
+    //     }
+    // });
     el.addEventListener('mousedown', ev => {
         el.setAttribute('readonly', 'readonly');
-        if (MOUSEPRESSED === true){
-            SELECTIONACTIVE = false;
-            MOUSESELECTIONSTART = new Cell(ev.target.id);
-            MOUSESELECTIONFINISH = new Cell(ev.target.id);
-            colorize(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+        if (MOUSE_PRESSED === true){
+            SELECTION_ACTIVE = false;
+            MOUSE_SELECTION_START = new Cell(ev.target.id);
+            MOUSE_SELECTION_FINISH = new Cell(ev.target.id);
+            colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
         else{
-            SELECTIONACTIVE = true;
-            MOUSEPRESSED = true;
-            MOUSESELECTIONSTART = new Cell(ev.target.id);
-            MOUSESELECTIONFINISH = new Cell(ev.target.id);
-            colorize(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+            SELECTION_ACTIVE = true;
+            MOUSE_PRESSED = true;
+            MOUSE_SELECTION_START = new Cell(ev.target.id);
+            MOUSE_SELECTION_FINISH = new Cell(ev.target.id);
+            colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
     });
     el.addEventListener('dblclick', ev => {
         ev.target.style.backgroundColor = 'rgb(182,204,250)'
-        MOUSEPRESSED = true;
-        MOUSESELECTIONSTART = null;
-        MOUSESELECTIONFINISH = null;
+        MOUSE_PRESSED = true;
+        MOUSE_SELECTION_START = null;
+        MOUSE_SELECTION_FINISH = null;
         el.removeAttribute('readonly');
     });
     el.addEventListener('mouseup', ev => {
-        console.log(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+        console.log(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         el.setAttribute('readonly', 'readonly');
-        MOUSEPRESSED = false;
+        MOUSE_PRESSED = false;
     });
     el.addEventListener('mouseover', ev => {
-        if (MOUSEPRESSED === true){
+        if (MOUSE_PRESSED === true){
             el.setAttribute('readonly', 'readonly');
-            MOUSESELECTIONFINISH = new Cell(ev.target.id);
-            colorize(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH));
+            MOUSE_SELECTION_FINISH = new Cell(ev.target.id);
+            colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
     });
 });
 
 document.onkeydown = (event) => {
-    if (SELECTIONACTIVE && event.key === 'Delete'){
+    if (SELECTION_ACTIVE && event.key === 'Delete'){
         console.log("delete");
-        deleteValues(getSelection(MOUSESELECTIONSTART, MOUSESELECTIONFINISH))
+        deleteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH))
     }
 }
