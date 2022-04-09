@@ -1,5 +1,4 @@
-import {isFormula, pullFuncName} from "./parsing";
-
+import {isFormula, calcFormula} from "./parsing.js";
 
 const ROWS = 10;
 const COLS = 10;
@@ -53,10 +52,11 @@ class Selection {
     }
 }
 
-class Cell{
+export class Cell{
     #col_num;
     #row_num;
     #value;
+    #formula;
     constructor(id, value="") {
         if (id.split('_').length !== 2)
             throw new Error("Wrong id parameter of Cell: " + id + ". Must be like X_X");
@@ -84,16 +84,21 @@ class Cell{
     getValue(){
         return this.#value;
     }
+
+    getFormula(){
+        return this.#formula;
+    }
+
+    setFormula(formula){
+        this.#formula = formula;
+    }
 }
 
-function checkStringId(id){
-    const row_num = id.split('_')[0];
-    const col_num = id.split('_')[1];
+export function checkStringId(id){
+    const row_num = Number(id.split('_')[0]);
+    const col_num = Number(id.split('_')[1]);
 
-    if (col_num < 1 || col_num > COLS) return false;
-    if (row_num < 1 || row_num > ROWS) return false;
-
-    return true;
+    return checkNumId(row_num, col_num);
 }
 
 function checkNumId(row, col){
@@ -162,8 +167,6 @@ function colorize(selection = null){
         return;
     }
 
-    // SELECTION_ACTIVE = true;
-
     document.querySelectorAll('input.cell, div.border').forEach(el => el.style.backgroundColor = 'white');
     selection.getCells().forEach(el => {
         document.getElementById(el.getFullId()).style.backgroundColor = 'rgb(105,181,255)';
@@ -174,7 +177,7 @@ function colorize(selection = null){
 
 }
 
-function getSelection(cell_1, cell_2){
+export function getSelection(cell_1, cell_2){
 
     if (cell_1 === null || cell_2 === null) return null;
 
@@ -235,8 +238,8 @@ function deleteValues(cells){
     }
 }
 
-function getLiteralInsteadNumber(number){
-    const literals = ['', 'A', 'B', 'C', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+export function getLiteralInsteadNumber(number){
+    const literals = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
     if (number >= 0 && number <= 26){
         return literals[number];
@@ -244,6 +247,12 @@ function getLiteralInsteadNumber(number){
 
     return literals[0];
 
+}
+
+export function getNumberInsteadLiteral(literal){
+    const literals = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+    return (literals.indexOf(literal.toUpperCase()) === -1) ? 0 : literals.indexOf(literal.toUpperCase());
 }
 
 function getAllValues(){
@@ -276,41 +285,36 @@ document.addEventListener('paste', ev => {
 });
 
 document.querySelectorAll('input.cell').forEach(el => {
+    el.onkeydown = (event) => {
+        if (event.key === "Enter"){
+            let cell_value = el.value;
+
+            if (isFormula(cell_value)){
+                let result = calcFormula(cell_value);
+                el.value = (!result) ? "#ОШИБКА" : result;
+            }
+        }
+    }
     el.setAttribute('readonly', 'readonly');
-    // el.addEventListener('cut', ev => {
-    //     if (SELECTION_ACTIVE){
-    //         CLIPBOARD = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
-    //         deleteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
-    //     }
-    // });
-    // el.addEventListener('copy', ev => {
-    //     if (SELECTION_ACTIVE){
-    //         CLIPBOARD = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
-    //     }
-    // });
-    // el.addEventListener('paste', ev => {
-    //     if (CLIPBOARD !== null){
-    //         pasteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH).getFirst(), CLIPBOARD);
-    //     }
-    // });
     el.addEventListener('mousedown', ev => {
+        // isFormula(el.value);
         el.setAttribute('readonly', 'readonly');
         if (MOUSE_PRESSED === true){
             SELECTION_ACTIVE = false;
-            MOUSE_SELECTION_START = new Cell(ev.target.id);
-            MOUSE_SELECTION_FINISH = new Cell(ev.target.id);
+            MOUSE_SELECTION_START = new Cell(el.id, el.value);
+            MOUSE_SELECTION_FINISH = new Cell(el.id, el.value);
             colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
         else{
             SELECTION_ACTIVE = true;
             MOUSE_PRESSED = true;
-            MOUSE_SELECTION_START = new Cell(ev.target.id);
-            MOUSE_SELECTION_FINISH = new Cell(ev.target.id);
+            MOUSE_SELECTION_START = new Cell(ev.target.id, el.value);
+            MOUSE_SELECTION_FINISH = new Cell(ev.target.id, el.value);
             colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
     });
     el.addEventListener('dblclick', ev => {
-        ev.target.style.backgroundColor = 'rgb(182,204,250)'
+        el.style.backgroundColor = 'rgb(182,204,250)'
         MOUSE_PRESSED = true;
         MOUSE_SELECTION_START = null;
         MOUSE_SELECTION_FINISH = null;
@@ -324,7 +328,7 @@ document.querySelectorAll('input.cell').forEach(el => {
     el.addEventListener('mouseover', ev => {
         if (MOUSE_PRESSED === true){
             el.setAttribute('readonly', 'readonly');
-            MOUSE_SELECTION_FINISH = new Cell(ev.target.id);
+            MOUSE_SELECTION_FINISH = new Cell(el.id, el.value);
             colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
     });
@@ -332,7 +336,8 @@ document.querySelectorAll('input.cell').forEach(el => {
 
 document.onkeydown = (event) => {
     if (SELECTION_ACTIVE && event.key === 'Delete'){
-        console.log("delete");
         deleteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH))
     }
 }
+
+
