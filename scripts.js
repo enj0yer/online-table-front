@@ -1,14 +1,51 @@
 import {isFormula, calcFormula} from "./parsing.js";
+import {Formula} from "./formulas_logic.js";
 
+/**
+ * Amount of rows in table.
+ * @type {number}
+ */
 const ROWS = 10;
+
+/**
+ * Amount of columns in table.
+ * @type {number}
+ */
 const COLS = 10;
 
+/**
+ * First cell of selection.
+ * @type {Cell}
+ */
 let MOUSE_SELECTION_START = null;
+
+/**
+ * Last cell of selection.
+ * @type {Cell}
+ */
 let MOUSE_SELECTION_FINISH = null;
+
+/**
+ * Condition of mouse button.
+ * @type {boolean}
+ */
 let MOUSE_PRESSED = false;
+
+/**
+ * Condition of selection.
+ * @type {boolean}
+ */
 let SELECTION_ACTIVE = false;
+
+/**
+ * Clipboard content.
+ * @type {Selection}
+ */
 let CLIPBOARD = null;
 
+/**
+ * Class, which represents the selected cells.
+ */
 class Selection {
     #rows_num;
     #cols_num;
@@ -21,26 +58,52 @@ class Selection {
         this.#cells = cells;
     }
 
+    /**
+     * Get all cells of specific selection.
+     * @returns {Array<Cell>}
+     */
     getCells() {
         return this.#cells;
     }
 
+    /**
+     * Get amount of rows in specific selection.
+     * @returns {number}
+     */
     getRowsNum() {
         return this.#rows_num;
     }
 
+    /**
+     * Get amount of columns in specific selection.
+     * @returns {number}
+     */
     getColsNum() {
         return this.#cols_num;
     }
 
+    /**
+     * Get first cell of specific selection.
+     * @returns {Cell}
+     */
     getFirst() {
         return this.#cells[0];
     }
 
+    /**
+     * Get last cell of specific selection.
+     * @returns {Cell}
+     */
     getLast(){
         return this.#cells[this.#cells.length - 1];
     }
 
+    /**
+     * Get cell by relative numbers of its row and column.
+     * @param row : number
+     * @param col : number
+     * @returns {Cell}
+     */
     getCellByRowCol(row, col){
         if (row > this.#rows_num || col > this.#cols_num || col < 1 || row < 1){
             throw new Error(`Values of row = ${row} or col = ${col} is out of bounds`);
@@ -52,12 +115,15 @@ class Selection {
     }
 }
 
+/**
+ * Class, which represents one cell.
+ */
 export class Cell{
     #col_num;
     #row_num;
     #value;
     #formula;
-    constructor(id, value="") {
+    constructor(id, value="", formula=null) {
         if (id.split('_').length !== 2)
             throw new Error("Wrong id parameter of Cell: " + id + ". Must be like X_X");
         this.#row_num = Number(id.split('_')[0]);
@@ -65,35 +131,69 @@ export class Cell{
         this.#value = value;
     }
 
+    /**
+     * Get cell id (format like [#row_num]_[#col_num]).
+     * Can be used in searching HTML.
+     * @returns {string}
+     */
     getFullId(){
         return this.#row_num + "_" + this.#col_num;
     }
 
+    /**
+     * Get the column number of specific cell.
+     * @returns {number}
+     */
     getColNum(){
         return this.#col_num;
     }
 
+    /**
+     * Get the row number of specific cell.
+     * @returns {number}
+     */
     getRowNum(){
         return this.#row_num;
     }
 
+    /**
+     * Set value to specific cell.
+     * @param value : string
+     */
     setValue(value){
         this.#value = value;
     }
 
+    /**
+     * Get value of specific cell.
+     * @returns {string}
+     */
     getValue(){
         return this.#value;
     }
 
+    /**
+     * Get formula (if exists) of specific cell.
+     * @returns {Formula}
+     */
     getFormula(){
         return this.#formula;
     }
 
+    /**
+     * Set formula to specific cell.
+     * @param formula : Formula
+     */
     setFormula(formula){
         this.#formula = formula;
     }
 }
 
+/**
+ * Check id (format like [#row_num]_[#col_num]) for being inside a valid value.
+ * @param id : string
+ * @returns {boolean}
+ */
 export function checkStringId(id){
     const row_num = Number(id.split('_')[0]);
     const col_num = Number(id.split('_')[1]);
@@ -101,6 +201,12 @@ export function checkStringId(id){
     return checkNumId(row_num, col_num);
 }
 
+/**
+ * Check id for being inside a valid value.
+ * @param row : number
+ * @param col : number
+ * @returns {boolean}
+ */
 function checkNumId(row, col){
     if (col < 1 || col > COLS) return false;
     if (row < 1 || row > ROWS) return false;
@@ -108,6 +214,11 @@ function checkNumId(row, col){
     return true;
 }
 
+/**
+ * @deprecated Has no usage.
+ * @param id : string
+ * @returns {Array<Cell>}
+ */
 function getNeighbours(id){
     if (typeof id === "string"){
         const id_values = id.split('_');
@@ -131,12 +242,15 @@ function getNeighbours(id){
             }
         });
 
-
-
         return neighbours;
     }
 }
 
+/**
+ * Generate a table with set parameters.
+ * @param rows : number
+ * @param cols : number
+ */
 function generateGrid(rows, cols){
 
     const container = document.getElementById('container');
@@ -161,6 +275,10 @@ function generateGrid(rows, cols){
     });
 }
 
+/**
+ * Color all selected cell in table.
+ * @param selection : Selection
+ */
 function colorize(selection = null){
     if (selection === null){
         SELECTION_ACTIVE = false;
@@ -177,6 +295,13 @@ function colorize(selection = null){
 
 }
 
+/**
+ * Get selection by first and last cells in it.
+ * Returns null if one of the parameters is null.
+ * @param cell_1 : Cell
+ * @param cell_2 : Cell
+ * @returns {Selection|null}
+ */
 export function getSelection(cell_1, cell_2){
 
     if (cell_1 === null || cell_2 === null) return null;
@@ -215,6 +340,11 @@ export function getSelection(cell_1, cell_2){
     return new Selection(cells, bottom - top + 1, right - left + 1);
 }
 
+/**
+ * Paste cells values into specific zone.
+ * @param start_cell : Cell
+ * @param cells_array : Selection
+ */
 function pasteValues(start_cell, cells_array){
 
     let start_col = start_cell.getColNum();
@@ -232,12 +362,22 @@ function pasteValues(start_cell, cells_array){
     }
 }
 
+/**
+ * Delete values of specific cells in table.
+ * @param cells : Selection
+ */
 function deleteValues(cells){
     for (let el of cells.getCells()){
         document.getElementById(el.getFullId()).value = "";
     }
 }
 
+/**
+ * Get literal [A-Z] instead number.
+ * If number not in range [1-26] returns ''.
+ * @param number : number
+ * @returns {string}
+ */
 export function getLiteralInsteadNumber(number){
     const literals = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
@@ -249,12 +389,22 @@ export function getLiteralInsteadNumber(number){
 
 }
 
+/**
+ * Get number [1-26] instead literal [A-Za-z].
+ * If literal is not valid, returns 0.
+ * @param literal : string
+ * @returns {number}
+ */
 export function getNumberInsteadLiteral(literal){
     const literals = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
-    return (literals.indexOf(literal.toUpperCase()) === -1) ? 0 : literals.indexOf(literal.toUpperCase());
+    return (literals.indexOf(literal.toUpperCase()) === -1 || literals.indexOf(literal.toUpperCase()) === 0) ? 0 : literals.indexOf(literal.toUpperCase());
 }
 
+/**
+ * @deprecated
+ * Print to console all values of table.
+ */
 function getAllValues(){
     const map = new Map();
 
@@ -262,6 +412,8 @@ function getAllValues(){
 
     console.log(map);
 }
+
+
 
 generateGrid(ROWS, COLS);
 document.getElementById("header").addEventListener('click', getAllValues);
@@ -297,7 +449,6 @@ document.querySelectorAll('input.cell').forEach(el => {
     }
     el.setAttribute('readonly', 'readonly');
     el.addEventListener('mousedown', ev => {
-        // isFormula(el.value);
         el.setAttribute('readonly', 'readonly');
         if (MOUSE_PRESSED === true){
             SELECTION_ACTIVE = false;
@@ -321,7 +472,6 @@ document.querySelectorAll('input.cell').forEach(el => {
         el.removeAttribute('readonly');
     });
     el.addEventListener('mouseup', ev => {
-        console.log(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         el.setAttribute('readonly', 'readonly');
         MOUSE_PRESSED = false;
     });
@@ -339,5 +489,3 @@ document.onkeydown = (event) => {
         deleteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH))
     }
 }
-
-
