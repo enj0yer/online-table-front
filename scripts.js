@@ -1,4 +1,4 @@
-import {isFormula, calcFormula, isSingleFunction} from "./parsing.js";
+import {isFormula, calcFormula, isSingleFunction, isCalcExpression} from "./parsing.js";
 import {Formula} from "./formulas_logic.js";
 
 /**
@@ -447,8 +447,10 @@ document.querySelectorAll('input.cell').forEach(el => {
                     el.value = (result === false) ? "#ОШИБКА" : result;
                 }
                 else el.value = "#ОШИБКА";
-
             }
+            // else if (isCalcExpression(cell_value)){
+            //     console.log(isCalcExpression(cell_value));
+            // }
         }
     }
     el.setAttribute('readonly', 'readonly');

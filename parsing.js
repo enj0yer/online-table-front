@@ -1,6 +1,13 @@
 import {getNumberInsteadLiteral, getSelection, Cell, checkStringId} from "./scripts.js";
 import {Formula, SUM, SUB} from "./formulas_logic.js";
 
+export function isCalcExpression(cell_value){
+    if (cell_value[0] === '='){
+        return parseAll(cell_value.slice(1))
+    }
+    else return false;
+}
+
 /**
  * Check cell value for containing only one formula
  * @param cell_value : string
@@ -24,6 +31,70 @@ export function isSingleFunction(cell_value){
             return i === cell_value.length - 1;
         }
     }
+}
+
+//^[0-9.]{1,}$|^[A-Za-z0-9]{1,6}$|^[A-Za-z]{1,}$
+
+function searchSafeValues(string){
+
+    let searchString = '';
+
+    for (let s of string){
+        searchString += s;
+        if (searchString.match("^[0-9.]{1,}$|^[A-Za-z0-9]{1,6}$")){
+            return searchString;
+        }
+    }
+
+    return false;
+}
+
+function replaceOp(stringOp){
+    switch (stringOp) {
+        case 'AND':
+            return '&&';
+
+        case 'OR':
+            return '||';
+
+        case 'NOT':
+            return '!';
+    }
+}
+
+export function parseAll(calc_expression){
+    let singleSeps = ['(', ')', ' ', '+', '-', '*', '/', '%', '!'];
+
+    let nonSingleSeps = ['<=', '>=', '==', '===', '&&', '||'];
+
+    let replaceSeps = ['AND', 'OR', 'NOT']
+
+    let result_array = [];
+
+    let acc = '';
+
+    for (let i = 0; i < calc_expression.length; i++){
+        if (singleSeps.includes(calc_expression[i]) && acc !== ''){
+            result_array.push(acc);
+            acc = ''
+        }
+        else if (nonSingleSeps.includes(acc)
+            && i < calc_expression.length - 1
+            && (singleSeps.includes(calc_expression[i + 1])
+                || searchSafeValues(calc_expression.slice(i, calc_expression.length)))){
+
+            result_array.push(acc);
+            acc = '';
+        }
+
+        acc += calc_expression[i];
+
+        if (replaceSeps.includes(acc)){
+            calc_expression.replace(acc, replaceOp(acc));
+        }
+    }
+
+    return result_array;
 }
 
 /**
