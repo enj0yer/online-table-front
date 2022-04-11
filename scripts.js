@@ -1,4 +1,4 @@
-import {isFormula, calcFormula} from "./parsing.js";
+import {isFormula, calcFormula, isSingleFunction} from "./parsing.js";
 import {Formula} from "./formulas_logic.js";
 
 /**
@@ -439,11 +439,15 @@ document.addEventListener('paste', ev => {
 document.querySelectorAll('input.cell').forEach(el => {
     el.onkeydown = (event) => {
         if (event.key === "Enter"){
-            let cell_value = el.value;
+            let cell_value = el.value.trim();
 
             if (isFormula(cell_value)){
-                let result = calcFormula(cell_value);
-                el.value = (!result) ? "#ОШИБКА" : result;
+                if (isSingleFunction(cell_value)){
+                    let result = calcFormula(cell_value);
+                    el.value = (result === false) ? "#ОШИБКА" : result;
+                }
+                else el.value = "#ОШИБКА";
+
             }
         }
     }

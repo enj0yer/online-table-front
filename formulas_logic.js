@@ -82,14 +82,15 @@ export let SUM = (params) => {
         return calcSepArgs(args, (args) => {
             let acc = 0;
             for (let arg of args){
-                if (arg.includes(':')) return false;
                 if (isDigit(arg)) acc += Number(arg);
                 else if (isCellNumber(arg) && checkStringId(getCellHTMLId(arg))){
                     let value = getCellHTMLValue(arg);
                     if (isDigit(value)){
                         acc += Number(value);
                     }
+                    else return false;
                 }
+                else return false;
             }
             return acc;
     })

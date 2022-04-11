@@ -1,6 +1,30 @@
 import {getNumberInsteadLiteral, getSelection, Cell, checkStringId} from "./scripts.js";
 import {Formula, SUM, SUB} from "./formulas_logic.js";
 
+/**
+ * Check cell value for containing only one formula
+ * @param cell_value : string
+ * @returns {boolean}
+ */
+export function isSingleFunction(cell_value){
+    let counter = 0;
+    let isChanged = false;
+
+    for (let i = 0; i < cell_value.length; i++){
+        if (cell_value[i] === '('){
+            counter += 1;
+            isChanged = true;
+        }
+
+        if (cell_value[i] === ')'){
+            counter -= 1;
+        }
+
+        if (counter === 0 && isChanged === true){
+            return i === cell_value.length - 1;
+        }
+    }
+}
 
 /**
  * Check the cell_value for similarity with formula format.

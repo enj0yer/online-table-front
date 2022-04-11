@@ -1,5 +1,5 @@
 *{
-    font-family: 'Segoe UI', serif;
+    font-family: 'monospace', serif;
 }
 
 #header{
@@ -26,6 +26,7 @@
     color: #212529;
     background-color: #fff;
     border: 1px solid #bdbdbd;
+    font-size: 20px;
 }
 .row{
     width: 100%;
