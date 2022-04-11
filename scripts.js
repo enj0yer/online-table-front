@@ -44,6 +44,12 @@ let SELECTION_ACTIVE = false;
 let CLIPBOARD = null;
 
 /**
+ * Representation of HTML cells
+ * @type {Array<Cell>}
+ */
+let CELLS = null
+
+/**
  * Class, which represents the selected cells.
  */
 class Selection {
@@ -123,12 +129,13 @@ export class Cell{
     #row_num;
     #value;
     #formula;
-    constructor(id, value="", formula=null) {
+    constructor(id, value="", formula="") {
         if (id.split('_').length !== 2)
             throw new Error("Wrong id parameter of Cell: " + id + ". Must be like X_X");
         this.#row_num = Number(id.split('_')[0]);
         this.#col_num = Number(id.split('_')[1]);
         this.#value = value;
+        this.#formula = formula;
     }
 
     /**
@@ -413,9 +420,75 @@ function getAllValues(){
     console.log(map);
 }
 
+function getCellsArray(){
+
+    console.log("Get new cells");
+
+    const HTMLCells = document.querySelectorAll('input.cell');
+
+    let objCells = [];
+
+    for (let HTMLCell of HTMLCells){
+        objCells.push(new Cell(HTMLCell.id, HTMLCell.value));
+    }
+
+    return objCells;
+}
+
+function preCalcFormula(cell_value){
+    const trim_cell_value = cell_value.trim();
+
+    if (isFormula(trim_cell_value)){
+        if (isSingleFunction(trim_cell_value)){
+            let result = calcFormula(trim_cell_value);
+            return (result === false) ? "#ОШИБКА" : [result, cell_value];
+        }
+        else return "#ОШИБКА";
+    }
+    else return cell_value;
+    // else if (isCalcExpression(cell_value)){
+    //     console.log(isCalcExpression(cell_value));
+    // }
+}
+
+function updateCells(newCell){
+
+    for (let i = 0; i < CELLS.length; i++){
+        if (CELLS[i].getFullId() === newCell.getFullId()){
+            CELLS[i] = newCell;
+        }
+    }
+}
+
+function getCellById(id){
+    for (let cell of CELLS){
+        if (cell.getFullId() === id){
+            return cell;
+        }
+    }
+}
+
+function syncHTMLWithCell(element){
+    const result = preCalcFormula(element.value);
+    let formula = "";
+    let value;
+    if (result instanceof Array){
+        value = result[0];
+        formula = result[1];
+    }
+    else{
+        value = result;
+    }
+    element.value = value;
+    updateCells(new Cell(element.id, element.value, formula));
+    console.log(CELLS);
+}
 
 
 generateGrid(ROWS, COLS);
+CELLS = getCellsArray();
+
+
 document.getElementById("header").addEventListener('click', getAllValues);
 
 document.addEventListener('copy', ev => {
@@ -439,43 +512,41 @@ document.addEventListener('paste', ev => {
 document.querySelectorAll('input.cell').forEach(el => {
     el.onkeydown = (event) => {
         if (event.key === "Enter"){
-            let cell_value = el.value.trim();
-
-            if (isFormula(cell_value)){
-                if (isSingleFunction(cell_value)){
-                    let result = calcFormula(cell_value);
-                    el.value = (result === false) ? "#ОШИБКА" : result;
-                }
-                else el.value = "#ОШИБКА";
-            }
-            // else if (isCalcExpression(cell_value)){
-            //     console.log(isCalcExpression(cell_value));
-            // }
+            syncHTMLWithCell(el);
         }
     }
+    el.addEventListener('change', ev => {
+        syncHTMLWithCell(el);
+    });
+    el.addEventListener('focusout', ev => {
+       el.value = getCellById(el.id).getValue();
+    });
     el.setAttribute('readonly', 'readonly');
     el.addEventListener('mousedown', ev => {
         el.setAttribute('readonly', 'readonly');
         if (MOUSE_PRESSED === true){
             SELECTION_ACTIVE = false;
-            MOUSE_SELECTION_START = new Cell(el.id, el.value);
-            MOUSE_SELECTION_FINISH = new Cell(el.id, el.value);
+            MOUSE_SELECTION_START = getCellById(el.id);
+            MOUSE_SELECTION_FINISH = getCellById(el.id);
             colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
         else{
             SELECTION_ACTIVE = true;
             MOUSE_PRESSED = true;
-            MOUSE_SELECTION_START = new Cell(ev.target.id, el.value);
-            MOUSE_SELECTION_FINISH = new Cell(ev.target.id, el.value);
+            MOUSE_SELECTION_START = getCellById(el.id);
+            MOUSE_SELECTION_FINISH = getCellById(el.id);
             colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
     });
     el.addEventListener('dblclick', ev => {
-        el.style.backgroundColor = 'rgb(182,204,250)'
+        el.style.backgroundColor = 'rgb(182,204,250)';
         MOUSE_PRESSED = true;
         MOUSE_SELECTION_START = null;
         MOUSE_SELECTION_FINISH = null;
         el.removeAttribute('readonly');
+        let formula = getCellById(el.id).getFormula();
+        console.log(formula);
+        if (formula !== '') el.value = formula;
     });
     el.addEventListener('mouseup', ev => {
         el.setAttribute('readonly', 'readonly');
@@ -484,7 +555,7 @@ document.querySelectorAll('input.cell').forEach(el => {
     el.addEventListener('mouseover', ev => {
         if (MOUSE_PRESSED === true){
             el.setAttribute('readonly', 'readonly');
-            MOUSE_SELECTION_FINISH = new Cell(el.id, el.value);
+            MOUSE_SELECTION_FINISH = getCellById(el.id);
             colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
         }
     });
