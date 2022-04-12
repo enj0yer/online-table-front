@@ -135,6 +135,7 @@ export class Cell{
     #row_num;
     #value;
     #formula;
+    #is_committed;
     constructor(id, value="", formula="") {
         if (id.split('_').length !== 2)
             throw new Error("Wrong id parameter of Cell: " + id + ". Must be like X_X");
@@ -142,6 +143,7 @@ export class Cell{
         this.#col_num = Number(id.split('_')[1]);
         this.#value = value;
         this.#formula = formula;
+        this.#is_committed = true;
     }
 
     /**
@@ -195,10 +197,18 @@ export class Cell{
 
     /**
      * Set formula to specific cell.
-     * @param formula : Formula
+     * @param formula : string
      */
     setFormula(formula){
         this.#formula = formula;
+    }
+
+    isCommitted(){
+        return this.#is_committed;
+    }
+
+    setCommitState(state){
+        this.#is_committed = state;
     }
 }
 
@@ -225,6 +235,10 @@ function checkNumId(row, col){
     if (row < 1 || row > ROWS) return false;
 
     return true;
+}
+
+function copyString(string){
+    return string.slice();
 }
 
 /**
@@ -346,8 +360,7 @@ export function getSelection(cell_1, cell_2){
 
     for (let i = top; i <= bottom; i++){
         for (let j = left; j <= right; j++){
-            // cells.push(getCellById(`${i}_${j}`));
-            cells.push(new Cell(`${i}_${j}`, document.getElementById(`${i}_${j}`).value));
+            cells.push(getCellById(`${i}_${j}`));
         }
     }
 
@@ -371,7 +384,13 @@ function pasteValues(start_cell, cells_array){
 
     for (let i = start_row; i <= cells_array.getRowsNum() + start_row - 1; i++){
         for (let j = start_col; j <= cells_array.getColsNum() + start_col - 1; j++){
-            document.getElementById(`${i}_${j}`).value = cells_array.getCellByRowCol(i - start_row + 1, j - start_col + 1).getValue();
+            let new_cell = cells_array.getCellByRowCol(i - start_row + 1, j - start_col + 1);
+            let cell = getCellById(`${i}_${j}`);
+            document.getElementById(`${i}_${j}`).value = new_cell.getValue();
+            cell.setCommitState(false);
+            cell.setValue(new_cell.getValue());
+            cell.setFormula(new_cell.getFormula());
+            cell.setCommitState(true);
         }
     }
 }
@@ -383,6 +402,10 @@ function pasteValues(start_cell, cells_array){
 function deleteValues(cells){
     for (let el of cells.getCells()){
         document.getElementById(el.getFullId()).value = "";
+        el.setCommitState(false);
+        el.setValue('');
+        el.setFormula('');
+        el.setCommitState(true);
     }
 }
 
@@ -427,6 +450,10 @@ function getAllValues(){
     console.log(map);
 }
 
+/**
+ * Get all HTML cells as Cell objects after page load
+ * @returns {Array<Cell>}
+ */
 function getCellsArray(){
 
     console.log("Get new cells");
@@ -458,7 +485,7 @@ function preCalcFormula(cell_value){
     // }
 }
 
-function updateCells(newCell){
+function updateCell(newCell){
 
     for (let i = 0; i < CELLS.length; i++){
         if (CELLS[i].getFullId() === newCell.getFullId()){
@@ -499,29 +526,49 @@ function disableCellsExceptSome(element){
 
 function enableCell(element){
     IS_CHANGING = true;
-    element.style.backgroundColor = 'rgb(182,204,250)';
     MOUSE_PRESSED = true;
-    MOUSE_SELECTION_START = getCellById(element.id);
-    MOUSE_SELECTION_FINISH = getCellById(element.id);
+
+    let cell = getCellById(element.id);
+
+    // MOUSE_SELECTION_START = cell;
+    // MOUSE_SELECTION_FINISH = cell;
+
+
+    cell.setCommitState(false);
+
     element.removeAttribute('readonly');
-    let formula = getCellById(element.id).getFormula();
+
+    let formula = cell.getFormula();
 
     if (formula !== '') element.value = formula;
+
+    element.style.backgroundColor = 'rgb(182,204,250)';
+
+    cell.setCommitState(true);
 }
 
 function disableCell(element){
     IS_CHANGING = false;
-    element.style.backgroundColor = 'rgb(255, 255, 255)';
     MOUSE_PRESSED = false;
+
     MOUSE_SELECTION_START = null;
     MOUSE_SELECTION_FINISH = null;
-    element.setAttribute('readonly', 'readonly');
-    let value = getCellById(element.id).getValue();
 
-    if (value !== '') element.value = value;
+    let cell = getCellById(element.id);
+
+    cell.setCommitState(false);
+
+    syncHTMLWithCell(element);
+
+    element.setAttribute('readonly', 'readonly');
+    element.style.backgroundColor = 'rgb(255, 255, 255)';
+
+    cell.setCommitState(true);
+
 }
 
 function syncHTMLWithCell(element){
+
     const result = preCalcFormula(element.value);
     let formula = "";
     let value;
@@ -533,7 +580,7 @@ function syncHTMLWithCell(element){
         value = result;
     }
     element.value = value;
-    updateCells(new Cell(element.id, element.value, formula));
+    updateCell(new Cell(element.id, element.value, formula));
 }
 
 
@@ -561,53 +608,123 @@ document.addEventListener('paste', ev => {
     }
 });
 
-document.querySelectorAll('input.cell').forEach(el => {
-    el.onkeydown = (ev) => {
-        console.log('keydown: ' + el.id);
+document.addEventListener('blur', ev => {
+    if (ev.target.classList.contains('cell') && IS_CHANGING && getCellById(ev.target.id).isCommitted()){
+        // syncHTMLWithCell(ev.target);
+        // console.log('change: ' + ev.target.id);
+        // ev.target.value = getCellById(ev.target.id).getValue();
+        disableCell(ev.target);
+    }
+});
+
+document.addEventListener('change', ev => {
+    if (ev.target.classList.contains('cell') && IS_CHANGING && getCellById(ev.target.id).isCommitted()){
+        disableCell(ev.target);
+    }
+});
+
+
+document.onkeydown = ev => {
+    if (ev.target.classList.contains('cell')){
+        console.log('keydown: ' + ev.target.id);
         if (ev.key === "Enter"){
             disableCell(ev.target);
         }
     }
-    el.addEventListener('change', ev => {
-        syncHTMLWithCell(ev.target);
-        console.log('change: ' + ev.target.id);
-        ev.target.value = getCellById(ev.target).getValue();
-    });
-    el.addEventListener('focusout', ev => {
-        console.log('focusout: ' + ev.target.id);
-    });
-    el.addEventListener('mousedown', ev => {
+};
+
+document.addEventListener('focusout', ev => {
+    if (ev.target.classList.contains('cell') && IS_CHANGING && getCellById(ev.target.id).isCommitted()){
+        console.log('blur: ' + ev.target.id);
+        disableCell(ev.target);
+    }
+});
+
+document.addEventListener('mousedown', ev => {
+    if (ev.target.classList.contains('cell')) {
         console.log('mousedown: ' + ev.target.id);
-        disableCellsExceptSome(ev.target);
+        // disableCellsExceptSome(ev.target);
         ev.target.setAttribute('readonly', 'readonly');
         SELECTION_ACTIVE = true;
         MOUSE_PRESSED = true;
         MOUSE_SELECTION_START = getCellById(ev.target.id);
         MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
         colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
-        // }
-    });
-    el.addEventListener('dblclick', ev => {
-        console.log('dbclick: ' + ev.target);
+    }
+});
+
+document.addEventListener('dblclick', ev => {
+    if (ev.target.classList.contains('cell')){
+        console.log('dbclick: ' + ev.target.id);
         enableCell(ev.target);
-    });
-    el.addEventListener('mouseup', ev => {
+    }
+});
+
+document.addEventListener('mouseup', ev => {
+    if (ev.target.classList.contains('cell')){
         console.log('mouseup: ' + ev.target.id);
         ev.target.setAttribute('readonly', 'readonly');
         MOUSE_PRESSED = false;
-    });
-    el.addEventListener('mouseover', ev => {
-        if (MOUSE_PRESSED === true && IS_CHANGING === false){
-            console.log('mouseover MOUSE_PRESSED IS_CHANGING ' + ev.target.id);
-            ev.target.setAttribute('readonly', 'readonly');
-            MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
-            colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
-        }
-    });
+    }
 });
 
-document.onkeydown = (event) => {
-    if (SELECTION_ACTIVE && event.key === 'Delete'){
+document.addEventListener('mouseover', ev => {
+    if (ev.target.classList.contains('cell') && MOUSE_PRESSED === true && IS_CHANGING === false){
+        console.log('mouseover MOUSE_PRESSED IS_CHANGING ' + ev.target.id);
+        ev.target.setAttribute('readonly', 'readonly');
+        MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
+        colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
+
+    }
+});
+
+// document.querySelectorAll('input.cell').forEach(el => {
+//     el.onkeydown = (ev) => {
+//         console.log('keydown: ' + ev.target.id);
+//         if (ev.key === "Enter"){
+//             disableCell(ev.target);
+//         }
+//     }
+//     el.addEventListener('change', ev => {
+//         syncHTMLWithCell(ev.target);
+//         console.log('change: ' + ev.target.id);
+//         ev.target.value = getCellById(ev.target.id).getValue();
+//     });
+//     el.addEventListener('focusout', ev => {
+//         console.log('focusout: ' + ev.target.id);
+//     });
+//     el.addEventListener('mousedown', ev => {
+//         console.log('mousedown: ' + ev.target.id);
+//         disableCellsExceptSome(ev.target);
+//         ev.target.setAttribute('readonly', 'readonly');
+//         SELECTION_ACTIVE = true;
+//         MOUSE_PRESSED = true;
+//         MOUSE_SELECTION_START = getCellById(ev.target.id);
+//         MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
+//         colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
+//
+//     });
+//     el.addEventListener('dblclick', ev => {
+//         console.log('dbclick: ' + ev.target);
+//         enableCell(ev.target);
+//     });
+//     el.addEventListener('mouseup', ev => {
+//         console.log('mouseup: ' + ev.target.id);
+//         ev.target.setAttribute('readonly', 'readonly');
+//         MOUSE_PRESSED = false;
+//     });
+//     el.addEventListener('mouseover', ev => {
+//         if (MOUSE_PRESSED === true && IS_CHANGING === false){
+//             console.log('mouseover MOUSE_PRESSED IS_CHANGING ' + ev.target.id);
+//             ev.target.setAttribute('readonly', 'readonly');
+//             MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
+//             colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
+//         }
+//     });
+// });
+
+document.onkeydown = (ev) => {
+    if (SELECTION_ACTIVE && ev.key === 'Delete'){
         deleteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH))
     }
 }

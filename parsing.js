@@ -184,6 +184,14 @@ export function calcSliceArgs(args, action){
     return calcSelection(getSelection(start_cell, finish_cell), action);
 }
 
+export function addOffsetToRelId(indicative_cell, args_array){
+    let formula = indicative_cell.getFormula();
+
+    for (let arg of args_array){
+        if (arg[0] === '$'){}
+    }
+}
+
 /**
  * Calculate separated arguments.
  * @param args : Array<string>
@@ -246,8 +254,16 @@ export function getCellHTMLValue(cell_number){
  * @returns {string}
  */
 export function getCellHTMLId(cell_number){
-    let letterId = cell_number.match("^[A-Za-z]{1,3}")[0];
-    let numberId = cell_number.match("[1-9]{1,3}")[0];
+    let letterId = cell_number.match("^[$]{0,1}[A-Za-z]{1,3}")[0];
+    let numberId = cell_number.match("[$]{0,1}[1-9]{1,3}")[0];
+
+    if (letterId.includes('$')){
+        letterId = letterId.replaceAll('$', '');
+    }
+
+    if (numberId.includes('$')){
+        numberId = numberId.replaceAll('$', '');
+    }
 
     return `${numberId}_${getNumberInsteadLiteral(letterId)}`
 }
@@ -258,7 +274,7 @@ export function getCellHTMLId(cell_number){
  * @returns {boolean}
  */
 export function isCellNumber(value) {
-    return value.match("^[A-Za-z]{1,3}[1-9]{1,3}$") !== null;
+    return value.match("^[$]{0,1}[A-Za-z]{1,3}[$]{0,1}[1-9]{1,3}$") !== null;
 }
 
 /**
