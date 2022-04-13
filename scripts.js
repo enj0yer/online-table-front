@@ -331,7 +331,13 @@ function colorize(selection = null){
  */
 export function getSelection(cell_1, cell_2){
 
-    if (cell_1 === null || cell_2 === null) return null;
+    if (cell_1 === null || cell_2 === null || cell_1 === undefined || cell_2 === undefined) return null;
+
+    if (cell_1 === cell_2){
+        const cells = [cell_1];
+
+        return new Selection(cells, 1, 1);
+    }
 
     let left;
     let right;
@@ -409,6 +415,16 @@ function deleteValues(cells){
     }
 }
 
+function cloneSelection(selection){
+    let copiedCells = [];
+
+    for (let cell of selection.getCells()){
+        copiedCells.push(new Cell(cell.getFullId(), cell.getValue(), cell.getFormula()));
+    }
+
+    return new Selection(copiedCells, selection.getRowsNum(), selection.getColsNum());
+}
+
 /**
  * Get literal [A-Z] instead number.
  * If number not in range [1-26] returns ''.
@@ -475,7 +491,7 @@ function preCalcFormula(cell_value){
     if (isFormula(trim_cell_value)){
         if (isSingleFunction(trim_cell_value)){
             let result = calcFormula(trim_cell_value);
-            return (result === false) ? "#ОШИБКА" : [result, cell_value];
+            return (result === false) ? ["#ОШИБКА", cell_value] : [result, cell_value];
         }
         else return "#ОШИБКА";
     }
@@ -592,27 +608,28 @@ document.getElementById("header").addEventListener('click', getAllValues);
 
 document.addEventListener('copy', ev => {
     if (SELECTION_ACTIVE){
-        CLIPBOARD = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
+        CLIPBOARD = cloneSelection(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
     }
 });
 document.addEventListener('cut', ev => {
     if (SELECTION_ACTIVE){
-        CLIPBOARD = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
-        deleteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
+        let selection = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
+        CLIPBOARD = cloneSelection(selection);
+        deleteValues(selection);
     }
 });
 
 document.addEventListener('paste', ev => {
     if (CLIPBOARD !== null){
-        pasteValues(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH).getFirst(), CLIPBOARD);
+        let selection = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
+        if (selection !== null)
+            pasteValues(selection.getFirst(), CLIPBOARD);
     }
+    else console.log('Буфер пустой');
 });
 
 document.addEventListener('blur', ev => {
     if (ev.target.classList.contains('cell') && IS_CHANGING && getCellById(ev.target.id).isCommitted()){
-        // syncHTMLWithCell(ev.target);
-        // console.log('change: ' + ev.target.id);
-        // ev.target.value = getCellById(ev.target.id).getValue();
         disableCell(ev.target);
     }
 });
@@ -624,53 +641,48 @@ document.addEventListener('change', ev => {
 });
 
 
-document.onkeydown = ev => {
-    if (ev.target.classList.contains('cell')){
-        console.log('keydown: ' + ev.target.id);
-        if (ev.key === "Enter"){
+document.addEventListener('keydown', ev => {
+    if (ev.key === "Enter"
+        && ev.target.classList.contains('cell')
+        && IS_CHANGING
+        && getCellById(ev.target.id).isCommitted()){
             disableCell(ev.target);
-        }
     }
-};
+});
 
 document.addEventListener('focusout', ev => {
     if (ev.target.classList.contains('cell') && IS_CHANGING && getCellById(ev.target.id).isCommitted()){
-        console.log('blur: ' + ev.target.id);
         disableCell(ev.target);
     }
 });
 
 document.addEventListener('mousedown', ev => {
     if (ev.target.classList.contains('cell')) {
-        console.log('mousedown: ' + ev.target.id);
-        // disableCellsExceptSome(ev.target);
         ev.target.setAttribute('readonly', 'readonly');
         SELECTION_ACTIVE = true;
         MOUSE_PRESSED = true;
-        MOUSE_SELECTION_START = getCellById(ev.target.id);
-        MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
+        let cell = getCellById(ev.target.id);
+        MOUSE_SELECTION_START = cell;
+        MOUSE_SELECTION_FINISH = cell;
         colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
     }
 });
 
 document.addEventListener('dblclick', ev => {
     if (ev.target.classList.contains('cell')){
-        console.log('dbclick: ' + ev.target.id);
         enableCell(ev.target);
     }
 });
 
 document.addEventListener('mouseup', ev => {
     if (ev.target.classList.contains('cell')){
-        console.log('mouseup: ' + ev.target.id);
         ev.target.setAttribute('readonly', 'readonly');
-        MOUSE_PRESSED = false;
     }
+    MOUSE_PRESSED = false;
 });
 
 document.addEventListener('mouseover', ev => {
     if (ev.target.classList.contains('cell') && MOUSE_PRESSED === true && IS_CHANGING === false){
-        console.log('mouseover MOUSE_PRESSED IS_CHANGING ' + ev.target.id);
         ev.target.setAttribute('readonly', 'readonly');
         MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
         colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
