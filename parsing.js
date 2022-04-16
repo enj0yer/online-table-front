@@ -49,25 +49,10 @@ function searchSafeValues(string){
     return false;
 }
 
-function replaceOp(stringOp){
-    switch (stringOp) {
-        case 'AND':
-            return '&&';
-
-        case 'OR':
-            return '||';
-
-        case 'NOT':
-            return '!';
-    }
-}
-
 export function parseAll(calc_expression){
     let singleSeps = ['(', ')', ' ', '+', '-', '*', '/', '%', '!'];
 
     let nonSingleSeps = ['<=', '>=', '==', '===', '&&', '||'];
-
-    let replaceSeps = ['AND', 'OR', 'NOT']
 
     let result_array = [];
 
@@ -89,9 +74,6 @@ export function parseAll(calc_expression){
 
         acc += calc_expression[i];
 
-        if (replaceSeps.includes(acc)){
-            calc_expression.replace(acc, replaceOp(acc));
-        }
     }
 
     return result_array;
@@ -164,7 +146,7 @@ export function calcSubFormula(params){
 /**
  * Calculate slice of cells values.
  * Returns false, if args have wrong format.
- * @param args : string
+ * @param args : Array<string>
  * @param action : function
  * @returns {boolean|number}
  */
@@ -175,11 +157,11 @@ export function calcSliceArgs(args, action){
 
     let start_cell = new Cell(getCellHTMLId(args[0]));
     if (!checkStringId(start_cell.getFullId())) return false;
-    start_cell.setValue(document.getElementById(start_cell.getFullId()));
+    start_cell.setValue(document.getElementById(start_cell.getFullId()).value);
 
     let finish_cell = new Cell(getCellHTMLId(args[1]));
     if (!checkStringId(finish_cell.getFullId())) return false;
-    finish_cell.setValue(document.getElementById(finish_cell.getFullId()));
+    finish_cell.setValue(document.getElementById(finish_cell.getFullId()).value);
 
     return calcSelection(getSelection(start_cell, finish_cell), action);
 }

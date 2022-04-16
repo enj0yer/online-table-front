@@ -45,20 +45,20 @@ let IS_CHANGING = false;
 
 /**
  * Clipboard content.
- * @type {Selection}
+ * @type {ArrayOfCells}
  */
 let CLIPBOARD = null;
 
 /**
  * Representation of HTML cells
- * @type {Array<Cell>}
+ * @type {ArrayOfCells}
  */
-let CELLS = null
+let CELLS = null;
 
 /**
  * Class, which represents the selected cells.
  */
-class Selection {
+class ArrayOfCells {
     #rows_num;
     #cols_num;
     #cells;
@@ -304,7 +304,7 @@ function generateGrid(rows, cols){
 
 /**
  * Color all selected cell in table.
- * @param selection : Selection
+ * @param selection : ArrayOfCells
  */
 function colorize(selection = null){
     if (selection === null){
@@ -327,7 +327,7 @@ function colorize(selection = null){
  * Returns null if one of the parameters is null.
  * @param cell_1 : Cell
  * @param cell_2 : Cell
- * @returns {Selection|null}
+ * @returns {ArrayOfCells|null}
  */
 export function getSelection(cell_1, cell_2){
 
@@ -336,7 +336,7 @@ export function getSelection(cell_1, cell_2){
     if (cell_1 === cell_2){
         const cells = [cell_1];
 
-        return new Selection(cells, 1, 1);
+        return new ArrayOfCells(cells, 1, 1);
     }
 
     let left;
@@ -370,13 +370,13 @@ export function getSelection(cell_1, cell_2){
         }
     }
 
-    return new Selection(cells, bottom - top + 1, right - left + 1);
+    return new ArrayOfCells(cells, bottom - top + 1, right - left + 1);
 }
 
 /**
  * Paste cells values into specific zone.
  * @param start_cell : Cell
- * @param cells_array : Selection
+ * @param cells_array : ArrayOfCells
  */
 function pasteValues(start_cell, cells_array){
 
@@ -403,7 +403,7 @@ function pasteValues(start_cell, cells_array){
 
 /**
  * Delete values of specific cells in table.
- * @param cells : Selection
+ * @param cells : ArrayOfCells
  */
 function deleteValues(cells){
     for (let el of cells.getCells()){
@@ -421,8 +421,7 @@ function cloneSelection(selection){
     for (let cell of selection.getCells()){
         copiedCells.push(new Cell(cell.getFullId(), cell.getValue(), cell.getFormula()));
     }
-
-    return new Selection(copiedCells, selection.getRowsNum(), selection.getColsNum());
+    return new ArrayOfCells(copiedCells, selection.getRowsNum(), selection.getColsNum());
 }
 
 /**
@@ -468,11 +467,9 @@ function getAllValues(){
 
 /**
  * Get all HTML cells as Cell objects after page load
- * @returns {Array<Cell>}
+ * @returns {ArrayOfCells}
  */
-function getCellsArray(){
-
-    console.log("Get new cells");
+function getArrayOfCells(){
 
     const HTMLCells = document.querySelectorAll('input.cell');
 
@@ -482,7 +479,7 @@ function getCellsArray(){
         objCells.push(new Cell(HTMLCell.id, HTMLCell.value));
     }
 
-    return objCells;
+    return new ArrayOfCells(objCells, ROWS, COLS);
 }
 
 function preCalcFormula(cell_value){
@@ -503,37 +500,34 @@ function preCalcFormula(cell_value){
 
 function updateCell(newCell){
 
-    for (let i = 0; i < CELLS.length; i++){
-        if (CELLS[i].getFullId() === newCell.getFullId()){
-            CELLS[i].setValue(newCell.getValue());
-            CELLS[i].setFormula(newCell.getFormula());
-            return;
-        }
-    }
+    let cell = CELLS.getCellByRowCol(newCell.getRowNum(), newCell.getColNum());
+
+    cell.setCommitState(false);
+    cell.setValue(newCell.getValue());
+    cell.setFormula(newCell.getFormula());
+    cell.setCommitState(true);
+
 }
 
 function getCellById(id){
-    for (let i = 0; i < CELLS.length; i++){
-        if (CELLS[i].getFullId() === id){
-            return CELLS[i];
-        }
-    }
+    let cell_id = id.split('_');
+    return CELLS.getCellByRowCol(Number(cell_id[0]), Number(cell_id[1]));
 }
 
 function enableCellsSelection(selection){
     for (let cell of selection.getCells()){
-        enableCell(getCellById(cell));
+        enableCell(getCellById(cell.getFullId()));
     }
 }
 
 function disableCellsSelection(selection){
     for (let cell of selection.getCells()){
-        disableCell(getCellById(cell));
+        disableCell(getCellById(cell.getFullId()));
     }
 }
 
 function disableCellsExceptSome(element){
-    for (let cell of CELLS){
+    for (let cell of CELLS.getCells()){
         if (cell.getFullId() !== element.id){
             disableCell(document.getElementById(cell.getFullId()));
         }
@@ -545,10 +539,6 @@ function enableCell(element){
     MOUSE_PRESSED = true;
 
     let cell = getCellById(element.id);
-
-    // MOUSE_SELECTION_START = cell;
-    // MOUSE_SELECTION_FINISH = cell;
-
 
     cell.setCommitState(false);
 
@@ -601,7 +591,7 @@ function syncHTMLWithCell(element){
 
 
 generateGrid(ROWS, COLS);
-CELLS = getCellsArray();
+CELLS = getArrayOfCells();
 
 
 document.getElementById("header").addEventListener('click', getAllValues);
@@ -639,7 +629,6 @@ document.addEventListener('change', ev => {
         disableCell(ev.target);
     }
 });
-
 
 document.addEventListener('keydown', ev => {
     if (ev.key === "Enter"
@@ -682,58 +671,13 @@ document.addEventListener('mouseup', ev => {
 });
 
 document.addEventListener('mouseover', ev => {
-    if (ev.target.classList.contains('cell') && MOUSE_PRESSED === true && IS_CHANGING === false){
+    if (ev.target.classList.contains('cell') && MOUSE_PRESSED && !IS_CHANGING){
         ev.target.setAttribute('readonly', 'readonly');
         MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
         colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
 
     }
 });
-
-// document.querySelectorAll('input.cell').forEach(el => {
-//     el.onkeydown = (ev) => {
-//         console.log('keydown: ' + ev.target.id);
-//         if (ev.key === "Enter"){
-//             disableCell(ev.target);
-//         }
-//     }
-//     el.addEventListener('change', ev => {
-//         syncHTMLWithCell(ev.target);
-//         console.log('change: ' + ev.target.id);
-//         ev.target.value = getCellById(ev.target.id).getValue();
-//     });
-//     el.addEventListener('focusout', ev => {
-//         console.log('focusout: ' + ev.target.id);
-//     });
-//     el.addEventListener('mousedown', ev => {
-//         console.log('mousedown: ' + ev.target.id);
-//         disableCellsExceptSome(ev.target);
-//         ev.target.setAttribute('readonly', 'readonly');
-//         SELECTION_ACTIVE = true;
-//         MOUSE_PRESSED = true;
-//         MOUSE_SELECTION_START = getCellById(ev.target.id);
-//         MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
-//         colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
-//
-//     });
-//     el.addEventListener('dblclick', ev => {
-//         console.log('dbclick: ' + ev.target);
-//         enableCell(ev.target);
-//     });
-//     el.addEventListener('mouseup', ev => {
-//         console.log('mouseup: ' + ev.target.id);
-//         ev.target.setAttribute('readonly', 'readonly');
-//         MOUSE_PRESSED = false;
-//     });
-//     el.addEventListener('mouseover', ev => {
-//         if (MOUSE_PRESSED === true && IS_CHANGING === false){
-//             console.log('mouseover MOUSE_PRESSED IS_CHANGING ' + ev.target.id);
-//             ev.target.setAttribute('readonly', 'readonly');
-//             MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
-//             colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
-//         }
-//     });
-// });
 
 document.onkeydown = (ev) => {
     if (SELECTION_ACTIVE && ev.key === 'Delete'){
