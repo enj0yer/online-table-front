@@ -38,7 +38,7 @@ let MOUSE_PRESSED = false;
 let SELECTION_ACTIVE = false;
 
 /**
- * Condition of cell state
+ * Condition of cell state.
  * @type {boolean}
  */
 let IS_CHANGING = false;
@@ -50,13 +50,13 @@ let IS_CHANGING = false;
 let CLIPBOARD = null;
 
 /**
- * Representation of HTML cells
+ * Representation of HTML cells.
  * @type {ArrayOfCells}
  */
 let CELLS = null;
 
 /**
- * Class, which represents the selected cells.
+ * Class, which represents the cells array.
  */
 class ArrayOfCells {
     #rows_num;
@@ -415,6 +415,11 @@ function deleteValues(cells){
     }
 }
 
+/**
+ * Get deep clone of selection.
+ * @param selection
+ * @returns {ArrayOfCells}
+ */
 function cloneSelection(selection){
     let copiedCells = [];
 
@@ -482,6 +487,12 @@ function getArrayOfCells(){
     return new ArrayOfCells(objCells, ROWS, COLS);
 }
 
+//TODO
+/**
+ * Begin any formula calculation.
+ * @param cell_value : string
+ * @returns {string|(string|*)[]|(string|boolean|*)[]|*}
+ */
 function preCalcFormula(cell_value){
     const trim_cell_value = cell_value.trim();
 
@@ -498,6 +509,10 @@ function preCalcFormula(cell_value){
     // }
 }
 
+/**
+ * Update cell in CELLS
+ * @param newCell : Cell
+ */
 function updateCell(newCell){
 
     let cell = CELLS.getCellByRowCol(newCell.getRowNum(), newCell.getColNum());
@@ -509,23 +524,40 @@ function updateCell(newCell){
 
 }
 
+/**
+ * Get cell from CELLS by id (format like [row_num]_[col_num])
+ * @param id : string
+ * @returns {Cell}
+ */
 function getCellById(id){
     let cell_id = id.split('_');
     return CELLS.getCellByRowCol(Number(cell_id[0]), Number(cell_id[1]));
 }
 
+/**
+ * Enable all cells in selection.
+ * @param selection :
+ */
 function enableCellsSelection(selection){
     for (let cell of selection.getCells()){
         enableCell(getCellById(cell.getFullId()));
     }
 }
 
+/**
+ * Disable all cells in selection.
+ * @param selection : ArrayOfCells
+ */
 function disableCellsSelection(selection){
     for (let cell of selection.getCells()){
         disableCell(getCellById(cell.getFullId()));
     }
 }
 
+/**
+ * Disable all cells in selection exclude one.
+ * @param element : Cell
+ */
 function disableCellsExceptSome(element){
     for (let cell of CELLS.getCells()){
         if (cell.getFullId() !== element.id){
@@ -534,6 +566,10 @@ function disableCellsExceptSome(element){
     }
 }
 
+/**
+ * Change some properties of cell.
+ * @param element : HTMLElement
+ */
 function enableCell(element){
     IS_CHANGING = true;
     MOUSE_PRESSED = true;
@@ -553,6 +589,10 @@ function enableCell(element){
     cell.setCommitState(true);
 }
 
+/**
+ * Change some properties of cell.
+ * @param element
+ */
 function disableCell(element){
     IS_CHANGING = false;
     MOUSE_PRESSED = false;
@@ -573,6 +613,10 @@ function disableCell(element){
 
 }
 
+/**
+ * Synchronizes the state of the HTML cell with the object Cell.
+ * @param element
+ */
 function syncHTMLWithCell(element){
 
     const result = preCalcFormula(element.value);

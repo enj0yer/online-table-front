@@ -52,11 +52,10 @@ export class Formula{
 }
 
 /**
- * Sum formula.
+ * Sum formula logic.
  * Returns false, if found errors.
  * @param params : string
  * @returns {boolean|number}
- * @constructor
  */
 export let SUM = (params) => {
 
@@ -105,6 +104,11 @@ export let SUM = (params) => {
     });
 };
 
+/**
+ * Sub formula logic.
+ * @param params : string
+ * @returns {number|boolean}
+ */
 export let SUB = (params) =>{
 
     let act_args = params;

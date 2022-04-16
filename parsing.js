@@ -1,6 +1,11 @@
 import {getNumberInsteadLiteral, getSelection, Cell, checkStringId} from "./scripts.js";
 import {Formula, SUM, SUB} from "./formulas_logic.js";
 
+/**
+ * Check string for similarity with a calculated expression.
+ * @param cell_value : string
+ * @returns {boolean|string[]}
+ */
 export function isCalcExpression(cell_value){
     if (cell_value[0] === '='){
         return parseAll(cell_value.slice(1))
@@ -9,7 +14,7 @@ export function isCalcExpression(cell_value){
 }
 
 /**
- * Check cell value for containing only one formula
+ * Check cell value for containing only one formula.
  * @param cell_value : string
  * @returns {boolean}
  */
@@ -34,7 +39,7 @@ export function isSingleFunction(cell_value){
 }
 
 //^[0-9.]{1,}$|^[A-Za-z0-9]{1,6}$|^[A-Za-z]{1,}$
-
+//TODO
 function searchSafeValues(string){
 
     let searchString = '';
@@ -49,6 +54,7 @@ function searchSafeValues(string){
     return false;
 }
 
+//TODO
 export function parseAll(calc_expression){
     let singleSeps = ['(', ')', ' ', '+', '-', '*', '/', '%', '!'];
 
@@ -165,7 +171,7 @@ export function calcSliceArgs(args, action){
 
     return calcSelection(getSelection(start_cell, finish_cell), action);
 }
-
+//TODO
 export function addOffsetToRelId(indicative_cell, args_array){
     let formula = indicative_cell.getFormula();
 
