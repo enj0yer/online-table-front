@@ -56,7 +56,10 @@ function getSafeEvalStr(str_array){
             safeString += str;
         }
         else if (isCellNumber(str)){
-            safeString += getCellHTMLValue(str);
+            if (checkStringId(getCellHTMLId(str))) {
+                safeString += getCellHTMLValue(str);
+            }
+            else return false;
         }
         else return false;
     }
