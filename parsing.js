@@ -1,8 +1,7 @@
-import {getNumberInsteadLiteral, getSelection, Cell, checkStringId} from "./scripts.js";
+import {getNumberInsteadLiteral, getSelection, Cell, checkStringId, getLiteralInsteadNumber} from "./scripts.js";
 import {Formula, SUM, SUB} from "./formulas_logic.js";
 
-// let SEPS = ['(', ')', '+', '-', '**', '*', '/', '%', '!', '<=', '>=', '===', '==', '!==', '!=', '&&', '||'];
-let SEPS = ['===', '!==', '==', '!=', '**', '<=', '>=', '&&', '||', '(', ')', '+', '-', '*', '/', '%', '!'];
+let SEPS = ['===', '!==', '==', '!=', '**', '<=', '>=', '&&', '||', '(', ')', '+', '-', '*', '/', '%', '!', ':', ';'];
 
 /**
  * Check string for similarity with a calculated expression.
@@ -47,7 +46,6 @@ function isSeparator(string){
 }
 
 
-//TODO
 function getSafeEvalStr(str_array){
     let safeString = '';
     for (let str of str_array){
@@ -72,7 +70,7 @@ function deleteEmptyStrings(array){
 }
 
 export function parseAll(calc_expression){
-    let sepsForSwap = ['\\===\\', '\\!==\\', '\\==\\', '\\!=\\', '\\**\\', '\\<=\\', '\\>=\\', '\\&&\\', '\\||\\', '\\(\\', '\\)\\', '\\+\\', '\\-\\', '\\*\\', '\\/\\', '\\%\\', '\\!\\'];
+    let sepsForSwap = ['\\===\\', '\\!==\\', '\\==\\', '\\!=\\', '\\**\\', '\\<=\\', '\\>=\\', '\\&&\\', '\\||\\', '\\(\\', '\\)\\', '\\+\\', '\\-\\', '\\*\\', '\\/\\', '\\%\\', '\\!\\', '\\:\\', '\\;\\'];
 
     let result_str = calc_expression;
 
@@ -186,13 +184,117 @@ export function calcSliceArgs(args, action){
 
     return calcSelection(getSelection(start_cell, finish_cell), action);
 }
-//TODO
-export function addOffsetToRelId(indicative_cell, args_array){
-    let formula = indicative_cell.getFormula();
 
-    for (let arg of args_array){
-        if (arg[0] === '$'){}
+function parseCellNumber(cell_number_str){
+    let parsedNum = [];
+
+    let acc = '';
+
+    let i = 0;
+
+    while (i < cell_number_str.length){
+        if (cell_number_str[i] === '$'){
+            parsedNum.push(cell_number_str[i]);
+            i++;
+        }
+        while(cell_number_str[i] !== '$' && !isDigit(cell_number_str[i])){
+            acc += cell_number_str[i];
+            i++;
+        }
+        parsedNum.push(acc);
+        acc = '';
+
+        if (cell_number_str[i] === '$'){
+            parsedNum.push(cell_number_str[i]);
+            i++;
+        }
+        while(cell_number_str[i] !== undefined){
+            acc += cell_number_str[i];
+            i++;
+        }
     }
+    parsedNum.push(acc);
+
+    return parsedNum;
+}
+
+function getAllCellNumbersArguments(args_str) {
+    let args = parseAll(args_str);
+
+    let cell_args = [];
+
+    for (let arg of args) {
+        if (isCellNumber(arg)) {
+            cell_args.push(arg);
+        }
+    }
+    return cell_args;
+}
+
+//FIXME - Need debugging
+/**
+ * Add offset to current cell number.
+ * @param parsed_cell : Array<string>
+ * @param vert : number
+ * @param hor : number
+ */
+function addOffsetToCell(parsed_cell, vert, hor){
+    for (let i = 0; i < parsed_cell.length; i++){
+        if (i !== 0 && parsed_cell[i] !== '$' && parsed_cell[i - 1] !== '$'){
+            if (isDigit(parsed_cell[i])){
+                let vert_num = Number(parsed_cell[i]);
+                parsed_cell[i] = String(vert_num + vert);
+            }
+            else{
+                let hor_num = Number(getNumberInsteadLiteral(parsed_cell[i]));
+                parsed_cell[i] = String(getLiteralInsteadNumber(hor_num + hor));
+            }
+        }
+        else if (i === 0 && parsed_cell[i] !== '$'){
+            if (isDigit(parsed_cell[i])){
+                let vert_num = Number(parsed_cell[i]);
+                parsed_cell[i] = String(vert_num + vert);
+            }
+            else{
+                let hor_num = Number(getNumberInsteadLiteral(parsed_cell[i]));
+                parsed_cell[i] = String(getLiteralInsteadNumber(hor_num + hor));
+            }
+        }
+    }
+
+    return parsed_cell.join('');
+}
+
+//FIXME - Need debugging
+/**
+ * Add offset to all cell numbers in formula.
+ * @param indicative_cell : Cell
+ * @param current_cell : Cell
+ * @param formula : string
+ * @returns {*}
+ */
+export function addOffsetToRelFormula(indicative_cell, current_cell, formula){
+    let cell_args = getAllCellNumbersArguments(formula);
+
+    let old_cell_args = [];
+
+    if (cell_args === []) return formula;
+
+    let vert_diff = current_cell.getRowNum() - indicative_cell.getRowNum();
+
+    let hor_diff = current_cell.getColNum() - indicative_cell.getColNum();
+
+    for (let arg of cell_args){
+        old_cell_args.push(arg.slice());
+        let parsed_arg = parseCellNumber(arg);
+        arg = addOffsetToCell(parsed_arg, vert_diff, hor_diff);
+    }
+
+    for (let i = 0; i < old_cell_args.length; i++){
+        formula.replace(old_cell_args[i], cell_args[i]);
+    }
+
+    return formula;
 }
 
 /**
@@ -218,7 +320,6 @@ export function trimArguments(args){
     for (let i = 0; i < args.length; i++){
         args[i] = args[i].trim();
     }
-
 }
 
 /**

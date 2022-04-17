@@ -1,4 +1,11 @@
-import {isFormula, calcFormula, isSingleFunction, isCalcExpression, calcExpression} from "./parsing.js";
+import {
+    isFormula,
+    calcFormula,
+    isSingleFunction,
+    isCalcExpression,
+    calcExpression,
+    addOffsetToRelFormula
+} from "./parsing.js";
 import {Formula} from "./formulas_logic.js";
 
 /**
@@ -237,7 +244,7 @@ function checkNumId(row, col){
     return true;
 }
 
-function copyString(string){
+export function copyString(string){
     return string.slice();
 }
 
@@ -392,14 +399,39 @@ function pasteValues(start_cell, cells_array){
         for (let j = start_col; j <= cells_array.getColsNum() + start_col - 1; j++){
             let new_cell = cells_array.getCellByRowCol(i - start_row + 1, j - start_col + 1);
             let cell = getCellById(`${i}_${j}`);
-            document.getElementById(`${i}_${j}`).value = new_cell.getValue();
             cell.setCommitState(false);
             cell.setValue(new_cell.getValue());
-            cell.setFormula(new_cell.getFormula());
+            let result = addOffsetToRelFormula(new_cell, cell, new_cell.getFormula());
+            if (!result){
+                cell.setCommitState(true);
+                alert("Ссылка за границу таблицы");
+                return;
+            }
+            cell.setFormula(result);
+            let formula_result = preCalcFormula(cell.getFormula());
+            if (formula_result instanceof Array){
+                document.getElementById(`${i}_${j}`).value = formula_result[0];
+                cell.setFormula(formula_result[1]);
+            }
+            else document.getElementById(`${i}_${j}`).value = formula_result;
             cell.setCommitState(true);
         }
     }
 }
+
+//
+// const result = preCalcFormula(element.value);
+// let formula = "";
+// let value;
+// if (result instanceof Array){
+//     value = result[0];
+//     formula = result[1];
+// }
+// else{
+//     value = result;
+// }
+// element.value = value;
+// updateCell(new Cell(element.id, element.value, formula));
 
 /**
  * Delete values of specific cells in table.
@@ -487,7 +519,6 @@ function getArrayOfCells(){
     return new ArrayOfCells(objCells, ROWS, COLS);
 }
 
-//TODO
 /**
  * Begin any formula calculation.
  * @param cell_value : string
