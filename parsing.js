@@ -1,16 +1,16 @@
 import {getNumberInsteadLiteral, getSelection, Cell, checkStringId} from "./scripts.js";
 import {Formula, SUM, SUB} from "./formulas_logic.js";
 
+// let SEPS = ['(', ')', '+', '-', '**', '*', '/', '%', '!', '<=', '>=', '===', '==', '!==', '!=', '&&', '||'];
+let SEPS = ['===', '!==', '==', '!=', '**', '<=', '>=', '&&', '||', '(', ')', '+', '-', '*', '/', '%', '!'];
+
 /**
  * Check string for similarity with a calculated expression.
  * @param cell_value : string
  * @returns {boolean|string[]}
  */
 export function isCalcExpression(cell_value){
-    if (cell_value[0] === '='){
-        return parseAll(cell_value.slice(1))
-    }
-    else return false;
+    return cell_value[0] === '=';
 }
 
 /**
@@ -38,51 +38,63 @@ export function isSingleFunction(cell_value){
     }
 }
 
-//^[0-9.]{1,}$|^[A-Za-z0-9]{1,6}$|^[A-Za-z]{1,}$
-//TODO
-function searchSafeValues(string){
-
-    let searchString = '';
-
-    for (let s of string){
-        searchString += s;
-        if (searchString.match("^[0-9.]{1,}$|^[A-Za-z0-9]{1,6}$")){
-            return searchString;
-        }
+function isSeparator(string){
+    for (let sep of SEPS){
+        if (sep === string) return true;
     }
 
     return false;
 }
 
+
 //TODO
-export function parseAll(calc_expression){
-    let singleSeps = ['(', ')', ' ', '+', '-', '*', '/', '%', '!'];
-
-    let nonSingleSeps = ['<=', '>=', '==', '===', '&&', '||'];
-
-    let result_array = [];
-
-    let acc = '';
-
-    for (let i = 0; i < calc_expression.length; i++){
-        if (singleSeps.includes(calc_expression[i]) && acc !== ''){
-            result_array.push(acc);
-            acc = ''
+function getSafeEvalStr(str_array){
+    let safeString = '';
+    for (let str of str_array){
+        str = str.trim();
+        if (isDigit(str) || isSeparator(str)){
+            safeString += str;
         }
-        else if (nonSingleSeps.includes(acc)
-            && i < calc_expression.length - 1
-            && (singleSeps.includes(calc_expression[i + 1])
-                || searchSafeValues(calc_expression.slice(i, calc_expression.length)))){
-
-            result_array.push(acc);
-            acc = '';
+        else if (isCellNumber(str)){
+            safeString += getCellHTMLValue(str);
         }
-
-        acc += calc_expression[i];
-
+        else return false;
     }
 
-    return result_array;
+    return safeString;
+}
+
+function deleteEmptyStrings(array){
+    return array.filter(el => el.trim() !== '');
+}
+
+export function parseAll(calc_expression){
+    let sepsForSwap = ['\\===\\', '\\!==\\', '\\==\\', '\\!=\\', '\\**\\', '\\<=\\', '\\>=\\', '\\&&\\', '\\||\\', '\\(\\', '\\)\\', '\\+\\', '\\-\\', '\\*\\', '\\/\\', '\\%\\', '\\!\\'];
+
+    let result_str = calc_expression;
+
+    for (let i = 0; i < SEPS.length; i++){
+        result_str = result_str.replaceAll(SEPS[i], sepsForSwap[i]);
+    }
+
+    return result_str.split('\\');
+}
+
+export function calcExpression(calc_expression){
+    let parsed_expression = deleteEmptyStrings(parseAll(calc_expression.slice(1)));
+
+    let safeString = getSafeEvalStr(parsed_expression);
+
+    if (!safeString) return false;
+
+    let result = '';
+
+    try {
+        result = eval(safeString);
+        return result;
+    } catch (e) {
+        if (e instanceof SyntaxError) return false;
+    }
 }
 
 /**
@@ -132,7 +144,7 @@ export function getEndOfArgs(params){
 }
 
 /**
- * Calculates sub formulas in string and replaces formula with result
+ * Calculates sub formula in string and replaces formula with result
  * @param params : string
  * @returns
  */

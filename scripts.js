@@ -1,4 +1,4 @@
-import {isFormula, calcFormula, isSingleFunction, isCalcExpression} from "./parsing.js";
+import {isFormula, calcFormula, isSingleFunction, isCalcExpression, calcExpression} from "./parsing.js";
 import {Formula} from "./formulas_logic.js";
 
 /**
@@ -503,10 +503,13 @@ function preCalcFormula(cell_value){
         }
         else return "#ОШИБКА";
     }
+    else if (isCalcExpression(cell_value)){
+        let result = calcExpression(cell_value);
+
+        return (result === false) ? ["#ОШИБКА", cell_value] : [result, cell_value];
+    }
     else return cell_value;
-    // else if (isCalcExpression(cell_value)){
-    //     console.log(isCalcExpression(cell_value));
-    // }
+
 }
 
 /**

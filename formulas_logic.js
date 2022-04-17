@@ -1,6 +1,5 @@
 import {checkStringId} from "./scripts.js";
 import {
-    calcFormula,
     isDigit,
     hasSubFormula,
     calcSubFormula,
@@ -11,14 +10,6 @@ import {
     calcSliceArgs,
     trimArguments
 } from "./parsing.js";
-
-/**
- * @deprecated
- */
-class FormulaAction{
-    #selection;
-    #formula;
-}
 
 /**
  * Class, which represents the cell formula.
