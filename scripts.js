@@ -746,6 +746,14 @@ document.addEventListener('mouseover', ev => {
         ev.target.setAttribute('readonly', 'readonly');
         MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
         colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
+        if (ev.ctrlKey){
+            let element = document.getElementById(ev.target.id);
+            let formula = addOffsetToRelFormula(MOUSE_SELECTION_START, getCellById(ev.target.id), MOUSE_SELECTION_START.getFormula());
+            if (formula === '')
+                element.value = MOUSE_SELECTION_START.getValue();
+            else element.value = formula;
+            syncHTMLWithCell(element);
+        }
 
     }
 });

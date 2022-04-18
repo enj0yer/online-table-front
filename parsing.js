@@ -1,5 +1,5 @@
 import {getNumberInsteadLiteral, getSelection, Cell, checkStringId, getLiteralInsteadNumber} from "./scripts.js";
-import {Formula, SUM, SUB} from "./formulas_logic.js";
+import {Formula, SUM, SUB, MULT, DIV, AVG, MAX, MIN, LENGTH, FILL} from "./formulas_logic.js";
 
 let SEPS = ['===', '!==', '==', '!=', '**', '<=', '>=', '&&', '||', '(', ')', '+', '-', '*', '/', '%', '!', ':', ';'];
 
@@ -234,7 +234,6 @@ function getAllCellNumbersArguments(args_str) {
     return cell_args;
 }
 
-//FIXME - Need debugging
 /**
  * Add offset to current cell number.
  * @param parsed_cell : Array<string>
@@ -273,7 +272,6 @@ function addOffsetToCell(parsed_cell, vert, hor){
 
 }
 
-//FIXME - Need debugging
 /**
  * Add offset to all cell numbers in formula.
  * @param indicative_cell : Cell
@@ -347,7 +345,7 @@ function calcSelection(selection, action){
  * @returns {boolean}
  */
 export function isDigit(value){
-    return !isNaN(value) && value !== '';
+    return !isNaN(value) && value !== '' && Number(value) !== Number.POSITIVE_INFINITY && Number(value) !== Number.NEGATIVE_INFINITY;
 }
 
 /**
@@ -457,13 +455,14 @@ export function calcFormula(string_formula){
  * List of available formulas.
  * @type {Array<Formula>}
  */
-const FORMULAS = [new Formula("SUM", SUM),
+const FORMULAS = [
+    new Formula("SUM", SUM),
     new Formula("SUB", SUB),
-    new Formula("MULT"),
-    new Formula("DIV"),
-    new Formula("AVG"),
-    new Formula("MAX"),
-    new Formula("MIN"),
-    new Formula("IF"),
-    new Formula("LENGTH"),
-    new Formula("FILL")];
+    new Formula("MULT", MULT),
+    new Formula("DIV", DIV),
+    new Formula("AVG", AVG),
+    new Formula("MAX", MAX),
+    new Formula("MIN", MIN),
+    new Formula("LENGTH", LENGTH),
+    new Formula("FILL", FILL)
+];
