@@ -401,37 +401,30 @@ function pasteValues(start_cell, cells_array){
             let cell = getCellById(`${i}_${j}`);
             cell.setCommitState(false);
             cell.setValue(new_cell.getValue());
-            let result = addOffsetToRelFormula(new_cell, cell, new_cell.getFormula());
-            if (!result){
+            if (new_cell.getFormula() !== ''){
+                let result = addOffsetToRelFormula(new_cell, cell, new_cell.getFormula());
+                if (result === false){
+                    cell.setCommitState(true);
+                    alert("Ссылка за границу таблицы");
+                    return;
+                }
+                cell.setFormula(result);
+                let formula_result = preCalcFormula(cell.getFormula());
+                if (formula_result instanceof Array){
+                    document.getElementById(cell.getFullId()).value = formula_result[0];
+                    cell.setFormula(formula_result[1]);
+                }
+                else document.getElementById(cell.getFullId()).value = formula_result;
                 cell.setCommitState(true);
-                alert("Ссылка за границу таблицы");
-                return;
             }
-            cell.setFormula(result);
-            let formula_result = preCalcFormula(cell.getFormula());
-            if (formula_result instanceof Array){
-                document.getElementById(`${i}_${j}`).value = formula_result[0];
-                cell.setFormula(formula_result[1]);
+            else{
+                document.getElementById(cell.getFullId()).value = new_cell.getValue();
+                cell.setValue(new_cell.getValue());
+                cell.setCommitState(true);
             }
-            else document.getElementById(`${i}_${j}`).value = formula_result;
-            cell.setCommitState(true);
         }
     }
 }
-
-//
-// const result = preCalcFormula(element.value);
-// let formula = "";
-// let value;
-// if (result instanceof Array){
-//     value = result[0];
-//     formula = result[1];
-// }
-// else{
-//     value = result;
-// }
-// element.value = value;
-// updateCell(new Cell(element.id, element.value, formula));
 
 /**
  * Delete values of specific cells in table.

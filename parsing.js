@@ -86,12 +86,15 @@ export function calcExpression(calc_expression){
 
     let safeString = getSafeEvalStr(parsed_expression);
 
-    if (!safeString) return false;
+    if (safeString === false) return false;
 
     let result = '';
 
     try {
         result = eval(safeString);
+        if (result === Infinity || result === -Infinity || isNaN(Number(result))){
+            return false;
+        }
         return result;
     } catch (e) {
         if (e instanceof SyntaxError) return false;
@@ -239,30 +242,35 @@ function getAllCellNumbersArguments(args_str) {
  * @param hor : number
  */
 function addOffsetToCell(parsed_cell, vert, hor){
+    let num_vert = 0;
+    let num_hor = 0;
+
+    let check_id = [];
+
     for (let i = 0; i < parsed_cell.length; i++){
-        if (i !== 0 && parsed_cell[i] !== '$' && parsed_cell[i - 1] !== '$'){
-            if (isDigit(parsed_cell[i])){
-                let vert_num = Number(parsed_cell[i]);
-                parsed_cell[i] = String(vert_num + vert);
-            }
-            else{
-                let hor_num = Number(getNumberInsteadLiteral(parsed_cell[i]));
-                parsed_cell[i] = String(getLiteralInsteadNumber(hor_num + hor));
-            }
+        if (parsed_cell[i] === '$') {
+            i++;
+            check_id.push(parsed_cell[i]);
+            continue;
         }
-        else if (i === 0 && parsed_cell[i] !== '$'){
-            if (isDigit(parsed_cell[i])){
-                let vert_num = Number(parsed_cell[i]);
-                parsed_cell[i] = String(vert_num + vert);
-            }
-            else{
-                let hor_num = Number(getNumberInsteadLiteral(parsed_cell[i]));
-                parsed_cell[i] = String(getLiteralInsteadNumber(hor_num + hor));
-            }
+        if (isDigit(parsed_cell[i])){
+            num_vert = Number(parsed_cell[i]);
+            parsed_cell[i] = String(num_vert + vert);
+            check_id.push(parsed_cell[i]);
+        }
+        else{
+            num_hor = Number(getNumberInsteadLiteral(parsed_cell[i]));
+            parsed_cell[i] = getLiteralInsteadNumber(num_hor + hor);
+            check_id.push(Number(getNumberInsteadLiteral(parsed_cell[i])));
         }
     }
 
-    return parsed_cell.join('');
+    if (checkStringId(check_id.join('_'))){
+        return parsed_cell.join('');
+    }
+    else return false;
+
+
 }
 
 //FIXME - Need debugging
@@ -276,7 +284,7 @@ function addOffsetToCell(parsed_cell, vert, hor){
 export function addOffsetToRelFormula(indicative_cell, current_cell, formula){
     let cell_args = getAllCellNumbersArguments(formula);
 
-    let old_cell_args = [];
+    let new_cell_args = [];
 
     if (cell_args === []) return formula;
 
@@ -285,13 +293,14 @@ export function addOffsetToRelFormula(indicative_cell, current_cell, formula){
     let hor_diff = current_cell.getColNum() - indicative_cell.getColNum();
 
     for (let arg of cell_args){
-        old_cell_args.push(arg.slice());
         let parsed_arg = parseCellNumber(arg);
-        arg = addOffsetToCell(parsed_arg, vert_diff, hor_diff);
+        let offset_cell = addOffsetToCell(parsed_arg, vert_diff, hor_diff);
+        if (offset_cell === false) return false;
+        new_cell_args.push(offset_cell);
     }
 
-    for (let i = 0; i < old_cell_args.length; i++){
-        formula.replace(old_cell_args[i], cell_args[i]);
+    for (let i = 0; i < new_cell_args.length; i++){
+        formula = formula.replace(cell_args[i], new_cell_args[i]);
     }
 
     return formula;
@@ -359,7 +368,7 @@ export function getCellHTMLValue(cell_number){
  */
 export function getCellHTMLId(cell_number){
     let letterId = cell_number.match("^[$]{0,1}[A-Za-z]{1,3}")[0];
-    let numberId = cell_number.match("[$]{0,1}[1-9]{1,3}")[0];
+    let numberId = cell_number.match("[$]{0,1}[0-9]{1,3}")[0];
 
     if (letterId.includes('$')){
         letterId = letterId.replaceAll('$', '');
@@ -378,7 +387,7 @@ export function getCellHTMLId(cell_number){
  * @returns {boolean}
  */
 export function isCellNumber(value) {
-    return value.match("^[$]{0,1}[A-Za-z]{1,3}[$]{0,1}[1-9]{1,3}$") !== null;
+    return value.match("^[$]{0,1}[A-Za-z]{1,3}[$]{0,1}[0-9]{1,3}$") !== null;
 }
 
 /**
