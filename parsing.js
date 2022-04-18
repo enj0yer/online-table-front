@@ -256,7 +256,7 @@ function addOffsetToCell(parsed_cell, vert, hor){
         if (isDigit(parsed_cell[i])){
             num_vert = Number(parsed_cell[i]);
             parsed_cell[i] = String(num_vert + vert);
-            check_id.push(parsed_cell[i]);
+            check_id.push(Number(parsed_cell[i]));
         }
         else{
             num_hor = Number(getNumberInsteadLiteral(parsed_cell[i]));
