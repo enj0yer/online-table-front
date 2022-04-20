@@ -717,7 +717,7 @@ document.addEventListener('focusout', ev => {
 });
 
 document.addEventListener('mousedown', ev => {
-    if (ev.target.classList.contains('cell')) {
+    if (ev.target.classList.contains('cell')){
         ev.target.setAttribute('readonly', 'readonly');
         SELECTION_ACTIVE = true;
         MOUSE_PRESSED = true;
@@ -745,7 +745,7 @@ document.addEventListener('mouseover', ev => {
     if (ev.target.classList.contains('cell') && MOUSE_PRESSED && !IS_CHANGING){
         ev.target.setAttribute('readonly', 'readonly');
         MOUSE_SELECTION_FINISH = getCellById(ev.target.id);
-        colorize(getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH));
+        let selection = getSelection(MOUSE_SELECTION_START, MOUSE_SELECTION_FINISH);
         if (ev.ctrlKey){
             let element = document.getElementById(ev.target.id);
             let formula = addOffsetToRelFormula(MOUSE_SELECTION_START, getCellById(ev.target.id), MOUSE_SELECTION_START.getFormula());
@@ -753,7 +753,9 @@ document.addEventListener('mouseover', ev => {
                 element.value = MOUSE_SELECTION_START.getValue();
             else element.value = formula;
             syncHTMLWithCell(element);
+            return;
         }
+        colorize(selection);
 
     }
 });

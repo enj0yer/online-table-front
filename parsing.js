@@ -1,7 +1,7 @@
 import {getNumberInsteadLiteral, getSelection, Cell, checkStringId, getLiteralInsteadNumber} from "./scripts.js";
 import {Formula, SUM, SUB, MULT, DIV, AVG, MAX, MIN, LENGTH, FILL} from "./formulas_logic.js";
 
-let SEPS = ['===', '!==', '==', '!=', '**', '<=', '>=', '&&', '||', '(', ')', '+', '-', '*', '/', '%', '!', ':', ';'];
+let SEPS = ['==', '!=', '**', '<=', '>=', '&&', '||', '(', ')', '<', '>','+', '-', '*', '/', '%', '!', ':', ';'];
 
 /**
  * Check string for similarity with a calculated expression.
@@ -10,6 +10,17 @@ let SEPS = ['===', '!==', '==', '!=', '**', '<=', '>=', '&&', '||', '(', ')', '+
  */
 export function isCalcExpression(cell_value){
     return cell_value[0] === '=';
+}
+
+
+function generateWorkingSeparators(){
+    let swapSeps = [];
+
+    for (let sep of SEPS){
+        swapSeps.push('\\' + sep + '\\');
+    }
+
+    return swapSeps;
 }
 
 /**
@@ -70,7 +81,10 @@ function deleteEmptyStrings(array){
 }
 
 export function parseAll(calc_expression){
-    let sepsForSwap = ['\\===\\', '\\!==\\', '\\==\\', '\\!=\\', '\\**\\', '\\<=\\', '\\>=\\', '\\&&\\', '\\||\\', '\\(\\', '\\)\\', '\\+\\', '\\-\\', '\\*\\', '\\/\\', '\\%\\', '\\!\\', '\\:\\', '\\;\\'];
+
+    let sepsForSwap = generateWorkingSeparators();
+    // FIXME Пофиксить работу !=, <=, >=, возможно **
+    // let sepsForSwap = ['\\===\\', '\\!==\\', '\\==\\', '\\!=\\', '\\**\\', '\\<=\\', '\\>=\\', '\\&&\\', '\\||\\', '\\(\\', '\\)\\', '\\<\\', '\\>\\', '\\+\\', '\\-\\', '\\*\\', '\\/\\', '\\%\\', '\\!\\', '\\:\\', '\\;\\'];
 
     let result_str = calc_expression;
 
@@ -95,7 +109,7 @@ export function calcExpression(calc_expression){
         if (result === Infinity || result === -Infinity || isNaN(Number(result))){
             return false;
         }
-        return result;
+        return String(result);
     } catch (e) {
         if (e instanceof SyntaxError) return false;
     }
