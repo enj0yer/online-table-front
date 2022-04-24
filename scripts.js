@@ -6,7 +6,6 @@ import {
     calcExpression,
     addOffsetToRelFormula
 } from "./parsing.js";
-import {Formula} from "./formulas_logic.js";
 
 /**
  * Amount of rows in table.
@@ -296,14 +295,14 @@ function generateGrid(rows, cols){
 
     container.querySelectorAll('.row').forEach(el => {
         if (!el.classList.contains("col_nums")) {
-            el.innerHTML += `<div class="row_nums cell border" id="${el.id}_num" style="text-align: center">${el.id.split('_')[1]}</div>`
+            el.innerHTML += `<div class="row_nums border" id="${el.id}_num" style="text-align: center">${el.id.split('_')[1]}</div>`
             for (let i = 1; i <= cols; i++) {
                 el.innerHTML += `<input id="${el.id.split('_')[1]}_${i}" value="" class="cell">`;
             }
         }
         else {
             for (let i = 0; i <= cols; i++) {
-                el.innerHTML += `<div id="col_${i}" class="cell border" style="text-align: center">${getLiteralInsteadNumber(i)}</div>`
+                el.innerHTML += `<div id="col_${i}" class="border" style="text-align: center">${getLiteralInsteadNumber(i)}</div>`
             }
         }
     });
@@ -376,7 +375,6 @@ export function getSelection(cell_1, cell_2){
             cells.push(getCellById(`${i}_${j}`));
         }
     }
-
     return new ArrayOfCells(cells, bottom - top + 1, right - left + 1);
 }
 
@@ -466,7 +464,6 @@ export function getLiteralInsteadNumber(number){
     if (number >= 0 && number <= 26){
         return literals[number];
     }
-
     return literals[0];
 
 }
@@ -508,7 +505,6 @@ function getArrayOfCells(){
     for (let HTMLCell of HTMLCells){
         objCells.push(new Cell(HTMLCell.id, HTMLCell.value));
     }
-
     return new ArrayOfCells(objCells, ROWS, COLS);
 }
 
@@ -533,7 +529,6 @@ function preCalcFormula(cell_value){
         return (result === false) ? ["#ОШИБКА", cell_value] : [result, cell_value];
     }
     else return cell_value;
-
 }
 
 /**
@@ -548,7 +543,6 @@ function updateCell(newCell){
     cell.setValue(newCell.getValue());
     cell.setFormula(newCell.getFormula());
     cell.setCommitState(true);
-
 }
 
 /**
@@ -751,12 +745,12 @@ document.addEventListener('mouseover', ev => {
             let formula = addOffsetToRelFormula(MOUSE_SELECTION_START, getCellById(ev.target.id), MOUSE_SELECTION_START.getFormula());
             if (formula === '')
                 element.value = MOUSE_SELECTION_START.getValue();
+            else if (formula === false) element.value = "#ОШИБКА";
             else element.value = formula;
             syncHTMLWithCell(element);
             return;
         }
         colorize(selection);
-
     }
 });
 

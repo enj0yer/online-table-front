@@ -134,7 +134,6 @@ export const SUB = (params) =>{
                 return result - Number(value);
             }
             else return false;
-
         });
     }
 };
@@ -209,7 +208,6 @@ export const DIV = (params) =>{
         act_args = calcSubFormula(act_args);
         if (act_args === false) return false;
     }
-
 
     if (act_args.includes(':')) return false;
     if (act_args.includes(';')){
@@ -444,6 +442,4 @@ export const FILL = (params) => {
     //else mode = 'v'
 
     trimArguments(parsed_args);
-
-
 };

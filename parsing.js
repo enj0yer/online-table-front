@@ -1,6 +1,10 @@
 import {getNumberInsteadLiteral, getSelection, Cell, checkStringId, getLiteralInsteadNumber} from "./scripts.js";
 import {Formula, SUM, SUB, MULT, DIV, AVG, MAX, MIN, LENGTH, FILL} from "./formulas_logic.js";
 
+/**
+ * Array of separators for parsing.
+ * @type Array<string>
+ */
 let SEPS = ['==', '!=', '**', '<=', '>=', '&&', '||', '(', ')', '<', '>','+', '-', '*', '/', '%', '!', ':', ';'];
 
 /**
@@ -12,14 +16,16 @@ export function isCalcExpression(cell_value){
     return cell_value[0] === '=';
 }
 
-
+/**
+ * Get an array of separators, suitable for parsing.
+ * @returns Array<string>
+ */
 function generateWorkingSeparators(){
     let swapSeps = [];
 
     for (let sep of SEPS){
         swapSeps.push('\\' + sep + '\\');
     }
-
     return swapSeps;
 }
 
@@ -37,26 +43,32 @@ export function isSingleFunction(cell_value){
             counter += 1;
             isChanged = true;
         }
-
         if (cell_value[i] === ')'){
             counter -= 1;
         }
-
         if (counter === 0 && isChanged === true){
             return i === cell_value.length - 1;
         }
     }
 }
 
+/**
+ * Check string on similarity with separators from SEPS array.
+ * @param string : string
+ * @returns {boolean}
+ */
 function isSeparator(string){
     for (let sep of SEPS){
         if (sep === string) return true;
     }
-
     return false;
 }
 
-
+/**
+ * Get a safe string for future eval() operations.
+ * @param str_array : Array<string>
+ * @returns {string|boolean}
+ */
 function getSafeEvalStr(str_array){
     let safeString = '';
     for (let str of str_array){
@@ -72,31 +84,74 @@ function getSafeEvalStr(str_array){
         }
         else return false;
     }
-
     return safeString;
 }
 
+/**
+ * Delete all empty strings of array.
+ * @param array : Array<string>
+ * @returns Array<string>
+ */
 function deleteEmptyStrings(array){
     return array.filter(el => el.trim() !== '');
 }
 
-export function parseAll(calc_expression){
+/**
+ * Clues all double separators, which are not in same element (for example : '<', '=' become '<=')
+ * @param parsed_expression : Array<string>
+ * @returns Array<string>
+ */
+function clueDoubleSeparators(parsed_expression){
+    let result = [];
+
+    for (let i = 0; i < parsed_expression.length; i++){
+        if (i < parsed_expression.length && isSeparator(parsed_expression[i] + parsed_expression[i + 1])){
+            result.push(parsed_expression[i] + parsed_expression[i + 1]);
+            i++;
+        }
+        else result.push(parsed_expression[i]);
+    }
+
+    return result;
+}
+
+/**
+ * Get an array of elements from a string.
+ * @param calc_expression : string
+ * @param for_args : boolean
+ * @returns Array<string>
+ */
+export function parseAll(calc_expression, for_args = false){
 
     let sepsForSwap = generateWorkingSeparators();
-    // FIXME Пофиксить работу !=, <=, >=, возможно **
-    // let sepsForSwap = ['\\===\\', '\\!==\\', '\\==\\', '\\!=\\', '\\**\\', '\\<=\\', '\\>=\\', '\\&&\\', '\\||\\', '\\(\\', '\\)\\', '\\<\\', '\\>\\', '\\+\\', '\\-\\', '\\*\\', '\\/\\', '\\%\\', '\\!\\', '\\:\\', '\\;\\'];
 
     let result_str = calc_expression;
 
     for (let i = 0; i < SEPS.length; i++){
+        if (!for_args && (SEPS[i] === ';' || SEPS[i] === ':')) continue;
+
         result_str = result_str.replaceAll(SEPS[i], sepsForSwap[i]);
     }
 
-    return result_str.split('\\');
+    return clueDoubleSeparators(deleteEmptyStrings(result_str.split('\\')));
+    // return result_str.split('\\');
 }
 
+/**
+ * Calculate an calculable string expression.
+ * @param calc_expression : string
+ * @returns {string|boolean}
+ */
 export function calcExpression(calc_expression){
-    let parsed_expression = deleteEmptyStrings(parseAll(calc_expression.slice(1)));
+
+    calc_expression = calc_expression.slice(1);
+
+    while (hasSubFormula(calc_expression)){
+        calc_expression = calcSubFormula(calc_expression);
+        if (calc_expression === false) return false;
+    }
+
+    let parsed_expression = parseAll(calc_expression);
 
     let safeString = getSafeEvalStr(parsed_expression);
 
@@ -142,22 +197,23 @@ export function getEndOfArgs(params){
 
     let counter = 0;
     let isChanged = false;
+    let formula_start = -1;
 
     for (let i = 0; i < params.length; i++){
-        if (params[i] === '('){
+
+        if (params[i] === '=') formula_start = i;
+
+        if (params[i] === '(' && formula_start !== -1){
             counter += 1;
             isChanged = true;
         }
-
-        if (params[i] === ')'){
+        if (params[i] === ')' && formula_start !== -1) {
             counter -= 1;
         }
-
-        if (counter === 0 && isChanged === true){
+        if (counter === 0 && isChanged === true && formula_start !== -1){
             return i;
         }
     }
-
     return -1;
 }
 
@@ -202,6 +258,11 @@ export function calcSliceArgs(args, action){
     return calcSelection(getSelection(start_cell, finish_cell), action);
 }
 
+/**
+ * Get a parsed cell number ('$a$1' --> '$', 'a', '$', '1')
+ * @param cell_number_str : string
+ * @returns Array<string>
+ */
 function parseCellNumber(cell_number_str){
     let parsedNum = [];
 
@@ -235,8 +296,15 @@ function parseCellNumber(cell_number_str){
     return parsedNum;
 }
 
+/**
+ * Get all cell numbers from formula or calc expression.
+ * @param args_str : string
+ * @returns Array<string>
+ */
 function getAllCellNumbersArguments(args_str) {
-    let args = parseAll(args_str);
+    let args = parseAll(args_str, true);
+
+    trimArguments(args);
 
     let cell_args = [];
 
@@ -277,13 +345,10 @@ function addOffsetToCell(parsed_cell, vert, hor){
             check_id.push(Number(getNumberInsteadLiteral(parsed_cell[i])));
         }
     }
-
     if (checkStringId(check_id.join('_'))){
         return parsed_cell.join('');
     }
     else return false;
-
-
 }
 
 /**
@@ -310,11 +375,9 @@ export function addOffsetToRelFormula(indicative_cell, current_cell, formula){
         if (offset_cell === false) return false;
         new_cell_args.push(offset_cell);
     }
-
     for (let i = 0; i < new_cell_args.length; i++){
         formula = formula.replace(cell_args[i], new_cell_args[i]);
     }
-
     return formula;
 }
 
@@ -329,7 +392,6 @@ export function calcSepArgs(args, action){
     for (let arg of args){
         if (arg.includes(':')) return false;
     }
-
     return action(args);
 }
 
@@ -389,7 +451,6 @@ export function getCellHTMLId(cell_number){
     if (numberId.includes('$')){
         numberId = numberId.replaceAll('$', '');
     }
-
     return `${numberId}_${getNumberInsteadLiteral(letterId)}`
 }
 
@@ -448,21 +509,17 @@ export function calcFormula(string_formula){
     if (fName === ''){
         return false;
     }
-
     let formula = checkFormula(fName);
 
     if (formula === false){
         return false;
     }
-
     let fArgs = getFormulaArguments(string_formula);
 
     if (fArgs === ''){
         return false;
     }
-
     return formula.action(fArgs);
-
 }
 
 /**
