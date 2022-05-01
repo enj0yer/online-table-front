@@ -1,4 +1,7 @@
-import {checkStringId} from "./scripts.js";
+import {
+    checkStringId,
+    ArrayOfCells
+} from "./scripts.js";
 import {
     isDigit,
     hasSubFormula,
@@ -8,7 +11,9 @@ import {
     getCellHTMLId,
     calcSepArgs,
     calcSliceArgs,
-    trimArguments, isFormula
+    trimArguments,
+    isFormula,
+    isCalcExpression,
 } from "./parsing.js";
 
 /**
@@ -41,6 +46,12 @@ export class Formula{
     }
 
 }
+
+/**
+ * Array of possible directions for FILL formula.
+ * @type Array<string>
+ */
+let directions = ['up', 'right', 'down', 'left'];
 
 /**
  * Sum formula logic.
@@ -418,28 +429,38 @@ export const LENGTH = (params) => {
     return act_arg.length;
 };
 
-//TODO
+//TODO - Может оно и не надо???
 export const FILL = (params) => {
+
     let parsed_args = params.split(';');
-
-    let mode;
-
-    if (isFormula(parsed_args[0])) mode = 'f';
-    else mode = 'v';
-
-    if (mode === 'f'){
-        if (parsed_args.length !== 3) return false;
-        let formula = parsed_args[0];
-
-        let length = 0;
-
-        if (isDigit(parsed_args[1]))
-            length = Number(parsed_args[1]);
-        else return false;
-
-        let dir = parsed_args[2];
-    }
-    //else mode = 'v'
-
     trimArguments(parsed_args);
+
+    if (parsed_args.length !== 4) return false;
+
+    let start_value = 0;
+    let progression_expression = '';
+    let dir = '';
+    let size = 0;
+
+    if (isDigit(parsed_args[0])){
+        start_value = Number(parsed_args[0]);
+    }
+    else return false;
+
+    if (isCalcExpression('=' + parsed_args[1])){
+        progression_expression = parsed_args[1];
+    }
+    else return false;
+
+    if (directions.includes(parsed_args[2])){
+        dir = parsed_args[2];
+    }
+    else return false;
+
+    if (isDigit(parsed_args[3])){
+        size = Number(parsed_args[3]);
+    }
+    else return false;
+
+
 };

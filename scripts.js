@@ -64,7 +64,7 @@ let CELLS = null;
 /**
  * Class, which represents the cells array.
  */
-class ArrayOfCells {
+export class ArrayOfCells {
     #rows_num;
     #cols_num;
     #cells;
